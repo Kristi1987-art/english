@@ -317,7 +317,7 @@ def build_page():
 def record(port=8000):
     """Микрофон браузер даёт только на localhost или https — открыть файл
        двойным щелчком не выйдет, поэтому поднимаем свой сервер."""
-    import http.server, socketserver, webbrowser, threading
+    import http.server, webbrowser, threading
     total, done = build_page()
     os.chdir(ROOT)
 
@@ -347,12 +347,17 @@ def record(port=8000):
         def log_message(self, *a):
             pass
 
+    # Поток на запрос обязателен: страница весит под мегабайт, браузер тянет её
+    # несколькими соединениями сразу, и однопоточный сервер на этом встаёт.
+    class Server(http.server.ThreadingHTTPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
     url = f"http://localhost:{port}/_record.html"
-    print(f"звуков всего {total}, уже записано {done}")
-    print(f"открой {url}   (закончить — Ctrl+C)")
+    print(f"звуков всего {total}, уже записано {done}", flush=True)
+    print(f"открой {url}   (закончить — Ctrl+C)", flush=True)
     threading.Timer(0.7, lambda: webbrowser.open(url)).start()
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", port), Handler) as httpd:
+    with Server(("127.0.0.1", port), Handler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
