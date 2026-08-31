@@ -408,12 +408,23 @@ button:disabled{opacity:.35;cursor:default}
 .status.good{color:var(--ok)}
 footer{margin-top:22px;border-top:2px solid var(--line);padding-top:14px}
 .count{font-size:14px;color:var(--dim);margin-bottom:10px}
+.noise{border:2px dashed var(--line);padding:10px 12px;margin-bottom:14px}
+.noise .row{margin-top:0;align-items:center}
+.opt{font-size:14px;color:var(--dim);display:flex;align-items:center;gap:6px}
 </style>
 <body>
 <h1>Мамин голос</h1>
 <p class="lead">Держи кнопку — говори звук — отпусти. Страница сама отрежет тишину
 и выровняет громкость. Главное: <b>не добавляй гласную</b> — /p/, а не «пы».
-Тихая комната, микрофон в 20–30 см, говори спокойно и не громко.</p>
+Микрофон в 10–15 см и чуть сбоку от рта, говори спокойно и не громко.</p>
+
+<div class="noise">
+  <div class="row">
+    <button id="mkNoise">Измерить шум комнаты (2 с)</button>
+    <label class="opt"><input type="checkbox" id="useNoise" checked> вычитать шум</label>
+  </div>
+  <div class="status" id="noiseStatus"></div>
+</div>
 
 <div class="chips" id="chips"></div>
 
@@ -508,7 +519,7 @@ function play(uri, cut){
 
 /* ---- запись ---------------------------------------------------------- */
 
-let stream = null, mr = null, chunks = [], on = false;
+let stream = null, mr = null, chunks = [], on = false, mode = 'sound';
 
 async function mic(){
   if(stream) return stream;
@@ -549,12 +560,133 @@ function stop(){
 
 /* ---- обработка записи ------------------------------------------------ */
 
+/* Приводим к моно 16 кГц и заодно срезаем низ: гул ноутбука, кулер и топот
+   по столу живут ниже сотни герц, а у речи там нет ничего нужного даже
+   у женского голоса. Два фильтра подряд — чтобы срез был крутым. */
 async function mono(buf){
   const len = Math.max(1, Math.ceil(buf.duration * RATE));
   const off = new OfflineAudioContext(1, len, RATE);
   const src = off.createBufferSource();
-  src.buffer = buf; src.connect(off.destination); src.start();
+  src.buffer = buf;
+  const hp1 = off.createBiquadFilter(), hp2 = off.createBiquadFilter();
+  hp1.type = hp2.type = 'highpass';
+  hp1.frequency.value = hp2.frequency.value = 90;
+  hp1.Q.value = hp2.Q.value = 0.7;
+  src.connect(hp1); hp1.connect(hp2); hp2.connect(off.destination);
+  src.start();
   return (await off.startRendering()).getChannelData(0);
+}
+
+/* ---- вычитание шума комнаты ------------------------------------------
+   Гул кулера и комнаты ровный: его спектр почти не меняется во времени.
+   Значит, его можно измерить один раз на двух секундах тишины и вычесть
+   из каждой записи по частотам. Отдельный микрофон это заменяет не
+   полностью, но ровный фон убирает целиком.
+
+   Встроенное подавление шума браузера не годится: оно первым делом ест
+   шипящие, а /s/, /f/ и /sh/ — ровно то, ради чего всё затевалось. */
+
+const N = 512, HOP = 128;                    /* окно 32 мс, перекрытие 75% */
+const HANN = new Float32Array(N);
+for(let i = 0; i < N; i++) HANN[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+
+let NOISE = null;
+try{
+  const kept = JSON.parse(localStorage.getItem('voice-noise') || 'null');
+  if(kept && kept.length === N / 2 + 1) NOISE = Float32Array.from(kept);
+}catch(e){}
+
+function fft(re, im, inv){
+  const n = re.length;
+  for(let i = 1, j = 0; i < n; i++){
+    let bit = n >> 1;
+    for(; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if(i < j){ let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for(let len = 2; len <= n; len <<= 1){
+    const ang = (inv ? 2 : -2) * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang), half = len >> 1;
+    for(let i = 0; i < n; i += len){
+      let cr = 1, ci = 0;
+      for(let k = 0; k < half; k++){
+        const ur = re[i+k], ui = im[i+k];
+        const br = re[i+k+half], bi = im[i+k+half];
+        const vr = br * cr - bi * ci, vi = br * ci + bi * cr;
+        re[i+k] = ur + vr; im[i+k] = ui + vi;
+        re[i+k+half] = ur - vr; im[i+k+half] = ui - vi;
+        const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+      }
+    }
+  }
+  if(inv) for(let i = 0; i < n; i++){ re[i] /= n; im[i] /= n; }
+}
+
+/* Средняя громкость каждой частоты за всю запись — портрет шума. */
+function profile(d){
+  const acc = new Float32Array(N / 2 + 1);
+  const re = new Float32Array(N), im = new Float32Array(N);
+  let frames = 0;
+  for(let p = 0; p + N <= d.length; p += HOP){
+    for(let i = 0; i < N; i++){ re[i] = d[p+i] * HANN[i]; im[i] = 0; }
+    fft(re, im, false);
+    for(let k = 0; k <= N / 2; k++) acc[k] += Math.sqrt(re[k]*re[k] + im[k]*im[k]);
+    frames++;
+  }
+  if(frames) for(let k = 0; k < acc.length; k++) acc[k] /= frames;
+  return frames ? acc : null;
+}
+
+/* Вычитаем портрет с запасом, но не в ноль: если убрать частоту полностью,
+   на её месте заводится бульканье. Порог 0.08 оставляет фон еле слышным
+   и ровным, что уху приятнее вычищенной пустоты. */
+function denoise(d){
+  if(!NOISE || !$('useNoise').checked) return d;
+  const A = 1.7, FLOOR = 0.08, pad = N;
+  const L = d.length + 2 * pad;
+  const x = new Float32Array(L); x.set(d, pad);
+  const out = new Float32Array(L), win = new Float32Array(L);
+  const re = new Float32Array(N), im = new Float32Array(N);
+  for(let p = 0; p + N <= L; p += HOP){
+    for(let i = 0; i < N; i++){ re[i] = x[p+i] * HANN[i]; im[i] = 0; }
+    fft(re, im, false);
+    for(let k = 0; k <= N / 2; k++){
+      const mag = Math.sqrt(re[k]*re[k] + im[k]*im[k]);
+      const g = mag > 1e-10 ? Math.max(FLOOR, (mag - A * NOISE[k]) / mag) : FLOOR;
+      re[k] *= g; im[k] *= g;
+      if(k > 0 && k < N / 2){ re[N-k] *= g; im[N-k] *= g; }
+    }
+    fft(re, im, true);
+    for(let i = 0; i < N; i++){ out[p+i] += re[i] * HANN[i]; win[p+i] += HANN[i] * HANN[i]; }
+  }
+  const y = new Float32Array(d.length);
+  for(let i = 0; i < d.length; i++){
+    const w = win[i + pad];
+    y[i] = w > 1e-6 ? out[i + pad] / w : 0;
+  }
+  return y;
+}
+
+const dB = v => v > 0 ? Math.round(20 * Math.log10(v)) : -99;
+
+function noiseLevel(){
+  if(!NOISE) return null;
+  let s = 0;
+  for(let k = 0; k < NOISE.length; k++) s += NOISE[k] * NOISE[k];
+  return Math.sqrt(s / NOISE.length) / (N / 4);      /* грубо, но сравнимо */
+}
+
+function showNoise(){
+  const b = $('mkNoise');
+  if(!NOISE){
+    $('noiseStatus').textContent = 'шум не измерен — нажми кнопку и две секунды помолчи';
+    $('noiseStatus').className = 'status';
+    b.textContent = 'Измерить шум комнаты (2 с)';
+  } else {
+    $('noiseStatus').textContent = 'шум комнаты измерен: ' + dB(noiseLevel()) + ' дБ';
+    $('noiseStatus').className = 'status good';
+    b.textContent = 'Измерить заново';
+  }
 }
 
 /* Где в записи звук. Порог считаем от самого громкого места, а не абсолютный:
@@ -620,18 +752,36 @@ function b64(ab){
 }
 
 async function finish(blob){
-  say('обрабатываю…');
+  const noiseRun = (mode === 'noise');
+  mode = 'sound';
+  say(noiseRun ? 'меряю шум…' : 'обрабатываю…');
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
     ctx.close && ctx.close();
-    const d = await mono(buf);
+    const raw = await mono(buf);
+
+    if(noiseRun){
+      const p = profile(raw);
+      if(!p){ say('запись вышла короче окна — попробуй ещё раз', 'bad'); return; }
+      NOISE = p;
+      try{ localStorage.setItem('voice-noise', JSON.stringify(Array.from(p))); }catch(e){}
+      showNoise();
+      say('шум запомнен, теперь он вычитается из каждой записи', 'good');
+      return;
+    }
+
+    const d = denoise(raw);
     const b = bounds(d);
     if(!b){ say('тишина: микрофон не слышит или звук слишком тихий', 'bad'); return; }
+    let peak = 0;
+    for(let i = b[0]; i < b[1]; i++){ const v = Math.abs(d[i]); if(v > peak) peak = v; }
     const clip = polish(d.subarray(b[0], b[1]));
     REC[cur().k] = 'data:audio/wav;base64,' + b64(wav(clip));
     keep();
-    say('готово, ' + (clip.length / RATE).toFixed(2) + ' с — слушай', 'good');
+    const nl = noiseLevel();
+    const snr = nl ? ', запас над шумом ' + (dB(peak) - dB(nl)) + ' дБ' : '';
+    say('готово, ' + (clip.length / RATE).toFixed(2) + ' с' + snr + ' — слушай', 'good');
     paint();
     play(REC[cur().k]);
   }catch(e){ say('не разобрал запись: ' + (e.message || e), 'bad'); }
@@ -646,6 +796,17 @@ rec.addEventListener('pointercancel', stop);
 rec.addEventListener('pointerleave',  stop);
 addEventListener('keydown', e => { if(e.code === 'Space' && !e.repeat){ e.preventDefault(); start(); } });
 addEventListener('keyup',   e => { if(e.code === 'Space'){ e.preventDefault(); stop(); } });
+
+$('mkNoise').onclick = async () => {
+  if(on) return;
+  mode = 'noise';
+  await start();
+  if(!on){ mode = 'sound'; return; }          /* микрофон не дали */
+  $('rec').textContent = '● молчи, меряю шум…';
+  say('две секунды тишины: не говори, не двигай ноутбук');
+  setTimeout(stop, 2000);
+};
+$('useNoise').onchange = () => showNoise();
 
 $('play').onclick  = () => play(REC[cur().k]);
 $('synth').onclick = () => { const s = SYNTH[cur().k]; if(s) play(s[0], s[1]); };
@@ -680,6 +841,7 @@ $('down').onclick  = () => {
   foot('скачано; дальше: python voice.py import _voice.json');
 };
 
+showNoise();
 paint();
 </script>
 """
