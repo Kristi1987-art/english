@@ -123,6 +123,31 @@ HOW = {
  "e_e":"Как ee — тяни длинное «и»: these.",
 }
 
+# Сколько звук должен длиться. Не придирка: слияние проигрывает звуки подряд,
+# и секундный /t/ растягивает трёхзвуковое слово на четыре секунды — ребёнок
+# успевает забыть начало. А ещё длина выдаёт главную ошибку: взрывной звук
+# физически не может тянуться, и если /t/ идёт секунду, значит к нему приписали
+# гласную и получилось «ту».
+KIND = {
+ "взрывной":        (0.08, 0.30, "p b t d c k g ck gg"),
+ "тянущийся":       (0.35, 0.90, "s ss f ff m n ng l ll r z sh th v"),
+ "выдох":           (0.12, 0.45, "h"),
+ "слитный":         (0.12, 0.45, "ch j x qu"),
+ "короткий гласный":(0.15, 0.45, "a e i o u oo2"),
+ "скольжение":      (0.15, 0.50, "w y"),
+ "долгий гласный":  (0.30, 0.85, "ai oa ie ee or oo er ar ou oi ue "
+                                 "a_e i_e o_e u_e e_e"),
+}
+KIND_OF = {k: (name, lo, hi)
+           for name, (lo, hi, keys) in KIND.items() for k in keys.split()}
+
+# Два знака — один звук, поэтому запись должна быть той же длины, что у одиночного.
+# Если ll вдвое длиннее l, значит его сказали дважды.
+SAME = {"ss":"s", "ff":"f", "ll":"l", "gg":"g", "ck":"k", "c":"k"}
+
+# Сколько кусков звука допустимо. Обычный звук один, слитные — стоп плюс шипение.
+PARTS = {"ch":2, "j":2, "x":2, "qu":2}
+
 # Для звуков, у которых нет отдельной карточки в GROUPS, — запись и пример.
 EXTRA = {
  "ck": ("/k/", "pick"), "ss": ("/s/", "glass"), "ll": ("/l/", "doll"),
@@ -166,8 +191,10 @@ def letters_from_index(src):
         else:
             ipa, word = EXTRA.get(k, ("", ""))
             ru = ""
+        kind, lo, hi = KIND_OF.get(k, ("звук", 0.1, 0.9))
         out.append({"k": k, "ipa": ipa, "word": word, "ru": ru,
-                    "how": HOW.get(k, ""), "say": SOUND_TEXT.get(k, k)})
+                    "how": HOW.get(k, ""), "say": SOUND_TEXT.get(k, k),
+                    "kind": kind, "lo": lo, "hi": hi, "parts": PARTS.get(k, 1)})
     return out
 
 # ------------------------------------------------------------------ синтез
@@ -367,6 +394,81 @@ def import_file(path):
     """Запасной путь: страницу открыли не с нашего сервера и она скачала файл."""
     return save_takes(json.loads(pathlib.Path(path).read_text(encoding="utf-8")))
 
+# ------------------------------------------------------------ проверка записей
+
+def measure(path):
+    """Длительность и число кусков звука. Куском считаем участок громче четверти
+       пика; куски, разделённые паузой короче 60 мс, — это один звук с провалом
+       внутри, а не два."""
+    import wave, array
+    w = wave.open(str(path))
+    n, sr = w.getnframes(), w.getframerate()
+    a = array.array("h"); a.frombytes(w.readframes(n)); w.close()
+    win = max(1, sr // 100)                       # окно 10 мс
+    env = [max((abs(v) for v in a[i:i+win]), default=0) / 32768
+           for i in range(0, len(a), win)]
+    peak = max(env) if env else 0
+    if peak <= 0:
+        return n / sr, 0
+    # Пауза короче 100 мс — это провал внутри звука, а не вторая попытка:
+    # у взрывного перед выхлопом стоит смычка, у дифтонга есть перегиб.
+    th, parts, gap, inside = peak * 0.25, 0, 0, False
+    for e in env:
+        if e > th:
+            if not inside: parts += 1; inside = True
+            gap = 0
+        else:
+            gap += 1
+            if gap > 10: inside = False
+    return n / sr, parts
+
+def check():
+    """Что не так с записями. Слышать это не нужно — длина и дробление ловят
+       ровно те два дефекта, которые портят слияние: приписанную гласную
+       и звук, сказанный дважды."""
+    if not HOME_DIR.is_dir():
+        print("живых записей нет — сделай python voice.py record"); return ""
+    got = {p.stem: p for p in sorted(HOME_DIR.glob("*.wav"))}
+    if not got:
+        print("в audio/phonemes_home нет wav"); return ""
+
+    order = [l["k"] for l in letters_from_index(read_index()) if l["k"] in got]
+    seen = {k: measure(got[k]) for k in order}
+
+    redo, meh = [], []
+    print(f"{'звук':7}{'сек':>6}{'кусков':>8}  что не так")
+    for key in order:
+        sec, parts = seen[key]
+        name, lo, hi = KIND_OF.get(key, ("звук", 0.1, 0.9))
+        note, hard = [], False
+        if sec > hi:
+            note.append(f"длинно для «{name}», ждём до {hi:.2f}"
+                        + (" — приписана гласная?" if name == "взрывной" else ""))
+            hard = sec > hi * 1.35          # чуть за край — терпимо, вдвое — нет
+        elif sec < lo:
+            note.append(f"коротко для «{name}», ждём от {lo:.2f}")
+            hard = sec < lo * 0.7
+        if parts > PARTS.get(key, 1):
+            note.append(f"разорван на {parts} — сказан дважды?")
+            hard = True
+        twin = SAME.get(key)
+        if twin in seen and seen[twin][0] > 0:
+            r = sec / seen[twin][0]
+            if r > 1.8 or r < 0.55:
+                note.append(f"тот же звук, что «{twin}», а длина в "
+                            f"{max(r, 1/r):.1f} раза другая")
+                hard = True
+        if hard: redo.append(key)
+        elif note: meh.append(key)
+        mark = "!!" if hard else ("· " if note else "  ")
+        print(f"{key:7}{sec:6.2f}{parts:8d} {mark}{'; '.join(note)}")
+
+    msg = f"в норме {len(seen) - len(redo) - len(meh)} из {len(seen)}"
+    if redo: msg += f"; перезаписать: {' '.join(redo)}"
+    if meh:  msg += f"; на грани, можно оставить: {' '.join(meh)}"
+    print(msg)
+    return msg
+
 # ------------------------------------------------------------ страница записи
 
 # Отдельная страница, а не кусок приложения: микрофон нужен один раз в жизни
@@ -389,6 +491,7 @@ h1{font-size:22px;margin:0 0 4px}
 .chip{border:2px solid var(--line);background:#fff;padding:2px 6px;font:13px monospace;
       cursor:pointer;color:var(--dim)}
 .chip.done{border-color:var(--ok);color:var(--ok);background:#F0F7EC}
+.chip.warn{border-color:var(--hot);color:var(--hot);background:#FBEEEA}
 .chip.now{border-color:var(--ink);color:var(--ink);font-weight:700}
 .card{border:3px solid var(--ink);padding:18px;background:#fff}
 .big{font-size:58px;font-weight:700;line-height:1;letter-spacing:2px}
@@ -465,6 +568,7 @@ const SYNTH   = __SYNTH__;
 
 const RATE = 16000;              /* речи хватает: у /s/ вся энергия ниже 8 кГц */
 const REC  = Object.assign({}, HAVE);
+const BAD  = {};                 /* звук -> что с ним не так */
 let idx = 0;
 
 /* Черновик живёт в браузере: закрыть вкладку на середине — обычное дело,
@@ -491,13 +595,17 @@ function paint(){
   $('play').disabled = $('drop').disabled = !REC[c.k];
   $('synth').disabled = !SYNTH[c.k];
   const done = LETTERS.filter(l => REC[l.k]).length;
+  const warn = LETTERS.filter(l => REC[l.k] && BAD[l.k]).length;
   $('count').textContent = 'записано ' + done + ' из ' + LETTERS.length +
-        (done === LETTERS.length ? ' — можно сохранять' : '');
+        (warn ? ', из них ' + warn + ' с замечанием — они красные' : '') +
+        (done === LETTERS.length && !warn ? ' — можно сохранять' : '');
   $('chips').innerHTML = '';
   LETTERS.forEach((l, i) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (REC[l.k] ? ' done' : '') + (i === idx ? ' now' : '');
+    b.className = 'chip' + (REC[l.k] ? (BAD[l.k] ? ' warn' : ' done') : '') +
+                  (i === idx ? ' now' : '');
     b.textContent = label(l.k);
+    if(BAD[l.k]) b.title = BAD[l.k];
     b.onclick = () => { idx = i; say(''); paint(); };
     $('chips').appendChild(b);
   });
@@ -728,6 +836,35 @@ function polish(x){
   return out;
 }
 
+/* Два дефекта, которые слышно только в приложении и поздно: приписанная
+   к согласному гласная («ту» вместо /t/) и звук, сказанный дважды. Оба видны
+   по длине и по числу кусков, поэтому говорим о них сразу после дубля. */
+function verdict(clip, c, sr){
+  sr = sr || RATE;
+  const sec = clip.length / sr;
+  const win = Math.round(sr * 0.01), env = [];
+  let peak = 0;
+  for(let i = 0; i < clip.length; i += win){
+    let p = 0;
+    for(let j = i; j < Math.min(i + win, clip.length); j++){
+      const v = Math.abs(clip[j]); if(v > p) p = v;
+    }
+    env.push(p); if(p > peak) peak = p;
+  }
+  let parts = 0, gap = 0, inside = false;
+  const th = peak * 0.25;
+  for(const e of env){
+    if(e > th){ if(!inside){ parts++; inside = true; } gap = 0; }
+    else { gap++; if(gap > 10) inside = false; }      /* провал короче 100 мс — не разрыв */
+  }
+  if(parts > (c.parts || 1)) return 'звук разорван на ' + parts + ' — сказан дважды?';
+  if(sec > c.hi * 1.35)
+    return 'длинно для «' + c.kind + '», ждём до ' + c.hi.toFixed(2) + ' с' +
+           (c.kind === 'взрывной' ? ': не приписалась ли гласная?' : '');
+  if(sec < c.lo * 0.7) return 'коротко для «' + c.kind + '», ждём от ' + c.lo.toFixed(2) + ' с';
+  return null;
+}
+
 function wav(d){
   const bytes = 44 + d.length * 2, ab = new ArrayBuffer(bytes), v = new DataView(ab);
   const tag = (o, t) => { for(let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
@@ -781,7 +918,10 @@ async function finish(blob){
     keep();
     const nl = noiseLevel();
     const snr = nl ? ', запас над шумом ' + (dB(peak) - dB(nl)) + ' дБ' : '';
-    say('готово, ' + (clip.length / RATE).toFixed(2) + ' с' + snr + ' — слушай', 'good');
+    const bad = verdict(clip, cur(), RATE);
+    if(bad) BAD[cur().k] = bad; else delete BAD[cur().k];
+    say('готово, ' + (clip.length / RATE).toFixed(2) + ' с' + snr +
+        (bad ? ' — ' + bad : ' — слушай'), bad ? 'bad' : 'good');
     paint();
     play(REC[cur().k]);
   }catch(e){ say('не разобрал запись: ' + (e.message || e), 'bad'); }
@@ -810,7 +950,7 @@ $('useNoise').onchange = () => showNoise();
 
 $('play').onclick  = () => play(REC[cur().k]);
 $('synth').onclick = () => { const s = SYNTH[cur().k]; if(s) play(s[0], s[1]); };
-$('drop').onclick  = () => { delete REC[cur().k]; keep(); say('убрано'); paint(); };
+$('drop').onclick  = () => { delete REC[cur().k]; delete BAD[cur().k]; keep(); say('убрано'); paint(); };
 $('prev').onclick  = () => { idx = (idx - 1 + LETTERS.length) % LETTERS.length; say(''); paint(); };
 $('next').onclick  = () => { idx = (idx + 1) % LETTERS.length; say(''); paint(); };
 $('skip').onclick  = () => {
@@ -841,8 +981,28 @@ $('down').onclick  = () => {
   foot('скачано; дальше: python voice.py import _voice.json');
 };
 
+/* Записи с прошлого раза приходят готовыми файлами, а замечания к ним нигде
+   не хранятся: считаем их заново при открытии, чтобы сразу было видно, что
+   переписать. То же самое делает python voice.py check. */
+async function auditAll(){
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  for(const l of LETTERS){
+    const uri = REC[l.k];
+    if(!uri || l.k in BAD) continue;
+    try{
+      const bin = Uint8Array.from(atob(uri.split(',')[1]), ch => ch.charCodeAt(0));
+      const buf = await ctx.decodeAudioData(bin.buffer);
+      const v = verdict(buf.getChannelData(0), l, buf.sampleRate);
+      if(v) BAD[l.k] = v;
+    }catch(e){}
+  }
+  ctx.close && ctx.close();
+  paint();
+}
+
 showNoise();
 paint();
+auditAll();
 </script>
 """
 
@@ -865,6 +1025,9 @@ def main():
 
     if what == "import":
         import_file(sys.argv[2] if len(sys.argv) > 2 else "_voice.json")
+
+    if what == "check":
+        check()
 
     if what in ("embed", "all"):
         print("ВШИВАЕМ")
