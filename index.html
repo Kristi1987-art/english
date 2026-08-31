@@ -1,0 +1,2466 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#8FC7EE">
+<title>Звуки и Блоки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Pixelify+Sans:wght@400;700&display=swap">
+
+<style>
+/* ============================================================
+   ЗВУКИ И БЛОКИ — фонетика английского для 8 лет
+
+   Тема: день в Майнкрафте. Светлый фон и тёмный текст — так печатают
+   детские книги и так сделаны все ведущие приложения для обучения
+   чтению. Блочные формы, отсутствие скруглений и жёсткие тени
+   оставлены от Майнкрафта, читаемость — от книги.
+   ============================================================ */
+:root{
+  --sky:#8FC7EE;    --sky-2:#B4DCF5;
+  --paper:#FFFDF6;  --paper-2:#F2EBD8;
+  --ink:#2B2118;    --ink-dim:#6E6152;
+  --grass:#6CBF3F;  --grass-d:#468A26;  --grass-ink:#2F6318;
+  --dirt:#8B5E34;   --dirt-d:#5C3C1F;
+  /* синий намеренно светлый: буквы на нём тёмные, как и везде в приложении —
+     ребёнок читает только тёмное по светлому */
+  --water:#7FC4EC;  --water-d:#2C6E96;
+  --gold:#F5B41C;   --gold-d:#B37D07;
+  /* золотой как ЗАЛИВКА читается, а как ТЕКСТ — нет: для букв нужен тёмный */
+  --gold-ink:#7A5200;
+  --red:#D9453D;    --red-d:#96241E;
+  --line:#C9BFA8;
+
+  --f-read:'Andika','Segoe UI',system-ui,sans-serif;     /* всё, что ребёнок читает */
+  --f-pix:'Pixelify Sans','Andika',system-ui,sans-serif; /* название и цифры */
+
+  --gap:14px;
+  --pad:16px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--sky);
+  color:var(--ink);
+  font-family:var(--f-read);
+  min-height:100dvh;
+  overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;
+}
+#clouds{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+#app{
+  position:relative;z-index:1;
+  max-width:520px;margin:0 auto;
+  /* именно height, а не min-height: иначе колонка растёт под содержимое
+     и нижние кнопки уезжают за край экрана */
+  height:100dvh;
+  display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 10px) var(--pad)
+          calc(env(safe-area-inset-bottom) + 14px);
+  gap:var(--gap);
+}
+
+/* ---------- блочная кнопка ---------- */
+.blk{
+  font-family:var(--f-read);font-weight:700;
+  border:0;border-radius:0;
+  color:var(--ink);
+  background:var(--paper-2);
+  box-shadow:0 6px 0 var(--line);
+  padding:14px 18px;font-size:19px;cursor:pointer;
+  transition:transform .06s,box-shadow .06s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  min-height:60px;
+}
+.blk:active{transform:translateY(6px);box-shadow:0 0 0 var(--line)}
+.blk:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.blk.grass{background:var(--grass);box-shadow:0 6px 0 var(--grass-d)}
+.blk.grass:active{box-shadow:0 0 0 var(--grass-d)}
+.blk.gold{background:var(--gold);box-shadow:0 6px 0 var(--gold-d)}
+.blk.gold:active{box-shadow:0 0 0 var(--gold-d)}
+.blk.water{background:var(--water);box-shadow:0 6px 0 var(--water-d)}
+.blk.water:active{box-shadow:0 0 0 var(--water-d)}
+.blk.dirt{background:var(--dirt);color:var(--paper);box-shadow:0 6px 0 var(--dirt-d)}
+.blk.dirt:active{box-shadow:0 0 0 var(--dirt-d)}
+.blk.ghost{background:var(--paper);color:var(--ink-dim);box-shadow:0 5px 0 var(--line);
+           min-height:48px;font-size:16px}
+.blk[disabled]{opacity:.5;pointer-events:none}
+
+/* ---------- шапка ---------- */
+.bar{display:flex;align-items:center;gap:10px;min-height:48px;flex:0 0 auto}
+.bar .title{font-family:var(--f-pix);font-size:20px;letter-spacing:.5px;flex:1;color:var(--ink)}
+.back{width:48px;min-height:48px;padding:0;flex:0 0 48px;
+      background:var(--paper);box-shadow:0 5px 0 var(--line);font-size:22px}
+.score{font-family:var(--f-pix);font-size:20px;color:var(--dirt-d);
+       display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+
+/* ---------- главный экран ---------- */
+.sub{color:var(--ink);font-size:15px;margin:0;line-height:1.45}
+.scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;
+        gap:var(--gap);-webkit-overflow-scrolling:touch}
+
+/* Главный экран прокручивается целиком, страницей, а не вложенным окошком.
+   Вложенный скролл жил внутри колонки высотой в экран: сверху ранг, снизу
+   десять кнопок режимов — буквам оставалось 140 пикселей, одна строка,
+   и до восьмой группы ребёнок крутил маленькое окно. На остальных экранах
+   вложенный скролл на месте: там кроме списка почти ничего нет. */
+#app.pagescroll{height:auto;min-height:100dvh}
+#app.pagescroll .scroll{flex:none;min-height:auto;overflow:visible}
+
+.gsec{display:flex;flex-direction:column;gap:9px}
+.ghead{display:flex;align-items:baseline;gap:8px}
+.ghead .gname{font-family:var(--f-pix);font-size:17px;color:var(--ink)}
+.ghead .gletters{font-weight:700;font-size:15px;color:var(--dirt-d);letter-spacing:3px}
+.ghead .gstate{margin-left:auto;font-family:var(--f-pix);font-size:15px;color:var(--ink-dim);
+               font-variant-numeric:tabular-nums}
+.gsec.locked .grid{opacity:.55}
+.lockmsg{font-size:14px;color:var(--ink);line-height:1.4;background:var(--paper);
+         padding:8px 10px;box-shadow:0 4px 0 var(--line)}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{
+  position:relative;aspect-ratio:1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:var(--paper);color:var(--ink);
+  box-shadow:0 6px 0 var(--line);
+  border:0;border-radius:0;cursor:pointer;
+  transition:transform .06s,box-shadow .06s;
+}
+.tile:active{transform:translateY(6px);box-shadow:0 0 0 var(--line)}
+.tile:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.tile .ltr{font-family:var(--f-read);font-weight:700;font-size:clamp(24px,8vw,34px);line-height:1}
+.tile .em{font-size:17px;line-height:1}
+.tile.done{background:var(--grass);box-shadow:0 6px 0 var(--grass-d)}
+.tile .mark{position:absolute;top:3px;right:5px;font-size:11px}
+
+.rowbtns{display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+
+/* ---------- карточка буквы ---------- */
+.card{
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:var(--paper);box-shadow:0 6px 0 var(--line);
+  padding:16px 14px;text-align:center;
+}
+.card .hero{font-family:var(--f-read);font-weight:700;font-size:clamp(56px,22vw,104px);
+            line-height:1;color:var(--ink);letter-spacing:4px}
+.card .pho{font-family:var(--f-pix);font-size:22px;color:var(--water-d)}
+.card .em{font-size:clamp(40px,15vw,72px);line-height:1}
+.card .word{font-family:var(--f-read);font-weight:700;font-size:clamp(28px,9vw,42px);
+            line-height:1;letter-spacing:1px;color:var(--ink)}
+.card .ru{color:var(--ink-dim);font-size:17px}
+.fact{background:var(--paper-2);padding:12px 14px;font-size:15px;line-height:1.45;
+      color:var(--ink);text-align:left;box-shadow:0 5px 0 var(--line);flex:0 0 auto}
+.nav{display:flex;gap:var(--gap);flex:0 0 auto}
+.nav .blk{flex:1}
+
+/* ---------- слова ---------- */
+.wrow{
+  display:flex;align-items:center;gap:12px;
+  background:var(--paper);box-shadow:0 5px 0 var(--line);
+  padding:12px 14px;border:0;border-radius:0;cursor:pointer;text-align:left;
+  color:var(--ink);font-family:var(--f-read);
+  transition:transform .06s,box-shadow .06s;
+}
+.wrow:active{transform:translateY(5px);box-shadow:0 0 0 var(--line)}
+.wrow:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.wrow .em{font-size:30px;flex:0 0 auto}
+.wrow .txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wrow .w{font-weight:700;font-size:25px;letter-spacing:2px}
+.wrow .t{color:var(--ink-dim);font-size:13px;line-height:1.35}
+.chips{display:flex;gap:5px;flex:0 0 auto}
+.chip{font-family:var(--f-read);font-weight:700;font-size:16px;
+      background:var(--water);color:var(--ink);padding:5px 8px;border:0;border-radius:0;
+      box-shadow:0 4px 0 var(--water-d);cursor:pointer;min-width:30px}
+.chip:active{transform:translateY(4px);box-shadow:0 0 0 var(--water-d)}
+.chip.lit{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 var(--gold-d)}
+.secname{font-family:var(--f-pix);font-size:15px;color:var(--ink);margin-top:4px}
+
+/* ---------- игра «поймай звук» ---------- */
+.game{flex:1;min-height:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:20px}
+.game .ask{font-size:17px;color:var(--ink);text-align:center;line-height:1.4}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);width:100%}
+.opt{aspect-ratio:1;font-family:var(--f-read);font-weight:700;
+     font-size:clamp(34px,13vw,52px);
+     background:var(--paper);color:var(--ink);border:0;border-radius:0;
+     box-shadow:0 6px 0 var(--line);cursor:pointer;
+     transition:transform .06s,box-shadow .06s,background .15s}
+.opt:active{transform:translateY(6px);box-shadow:0 0 0 var(--line)}
+.opt:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.opt.ok{background:var(--grass);box-shadow:0 6px 0 var(--grass-d)}
+.opt.no{background:var(--red);color:var(--paper);box-shadow:0 6px 0 var(--red-d)}
+.streak{font-family:var(--f-pix);font-size:18px;color:var(--dirt-d);
+        font-variant-numeric:tabular-nums}
+
+/* ---------- «выложи слово» ---------- */
+.spell{flex:1;min-height:0;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;gap:16px}
+.spell .pic{font-size:clamp(52px,20vw,86px);line-height:1}
+.slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.slot{width:clamp(48px,15vw,64px);height:clamp(56px,17vw,74px);
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--f-read);font-weight:700;font-size:clamp(28px,10vw,40px);
+      background:var(--paper-2);box-shadow:inset 0 0 0 3px var(--line);color:var(--ink)}
+.slot.full{background:var(--paper);box-shadow:0 5px 0 var(--line)}
+.slots.good .slot{background:var(--grass);box-shadow:0 5px 0 var(--grass-d)}
+.slots.bad .slot{background:var(--red);color:var(--paper);box-shadow:0 5px 0 var(--red-d);
+                 animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.bank{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;width:100%}
+.bk{aspect-ratio:1;font-family:var(--f-read);font-weight:700;font-size:clamp(22px,7vw,30px);
+    background:var(--water);color:var(--ink);border:0;border-radius:0;
+    box-shadow:0 5px 0 var(--water-d);cursor:pointer;transition:transform .06s,box-shadow .06s}
+.bk:active{transform:translateY(5px);box-shadow:0 0 0 var(--water-d)}
+.bk:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.bk.used{opacity:.25;pointer-events:none}
+
+/* ---------- ранг: соревнование с самим собой ---------- */
+.rank{display:flex;align-items:center;gap:10px;flex:0 0 auto;
+      background:var(--paper);padding:9px 12px;box-shadow:0 5px 0 var(--line)}
+.rank .em{font-size:26px;line-height:1;flex:0 0 auto}
+.rank .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.rank .name{font-family:var(--f-pix);font-size:16px;color:var(--ink)}
+.rank .next{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+.rank .barwrap{height:10px;background:var(--paper-2);box-shadow:inset 0 0 0 2px var(--line)}
+.rank .bar{height:100%;background:var(--grass)}
+
+/* ---------- сетка режимов ---------- */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:0 0 auto}
+.modes .wide{grid-column:1 / -1}
+/* колонка, а не строка: подпись должна встать под названием режима.
+   .blk — это flex-контейнер, поэтому <br> внутри него не сработал бы */
+.modes .blk{font-size:15px;min-height:52px;padding:7px 10px;text-align:center;
+            flex-direction:column;gap:1px;line-height:1.15}
+
+/* ---------- слова-невидимки ---------- */
+.trow{display:flex;align-items:center;gap:14px;
+      background:var(--paper);box-shadow:0 5px 0 var(--gold-d);
+      border-left:8px solid var(--gold);
+      padding:12px 14px;border-top:0;border-right:0;border-bottom:0;border-radius:0;
+      cursor:pointer;text-align:left;color:var(--ink);font-family:var(--f-read);width:100%;
+      transition:transform .06s,box-shadow .06s}
+.trow:active{transform:translateY(5px);box-shadow:0 0 0 var(--gold-d)}
+.trow:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.trow .w{font-weight:700;font-size:30px;letter-spacing:2px;flex:0 0 auto;min-width:76px}
+.trow .txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.trow .ru{font-size:17px;font-weight:700}
+.trow .ex{font-size:13px;color:var(--ink-dim);line-height:1.35}
+.note{background:var(--gold);padding:11px 13px;font-size:14px;line-height:1.45;
+      color:var(--ink);box-shadow:0 5px 0 var(--gold-d);flex:0 0 auto}
+
+/* ---------- забег на время ---------- */
+.hud{display:flex;align-items:center;gap:10px;flex:0 0 auto;
+     background:var(--paper);padding:8px 12px;box-shadow:0 5px 0 var(--line);
+     font-family:var(--f-pix);font-variant-numeric:tabular-nums}
+.hud .clock{font-size:28px;color:var(--ink);min-width:70px}
+.hud .sc{margin-left:auto;font-size:22px;color:var(--grass-ink)}
+.hud .rec{font-size:14px;color:var(--ink-dim)}
+.dots{display:flex;gap:5px;flex:0 0 auto}
+.dot{flex:1;height:12px;background:var(--paper);box-shadow:inset 0 0 0 2px var(--line)}
+.dot.hit{background:var(--grass);box-shadow:0 3px 0 var(--grass-d)}
+.dot.miss{background:var(--red);box-shadow:0 3px 0 var(--red-d)}
+.ptime{font-family:var(--f-pix);font-size:16px;color:var(--ink-dim);
+       font-variant-numeric:tabular-nums}
+.race{flex:1;min-height:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:18px}
+.race .q{font-family:var(--f-read);font-weight:700;
+         font-size:clamp(44px,15vw,72px);letter-spacing:3px;color:var(--ink);
+         background:var(--paper);box-shadow:0 6px 0 var(--line);
+         padding:14px 26px;text-align:center;width:100%}
+.race .q.sentence{font-size:clamp(22px,6.5vw,32px);letter-spacing:0;line-height:1.35;
+                  padding:16px 18px}
+.race .q.ok{background:var(--grass);box-shadow:0 6px 0 var(--grass-d)}
+.race .q.no{background:var(--red);color:var(--paper);box-shadow:0 6px 0 var(--red-d)}
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.pk{aspect-ratio:1;font-size:clamp(34px,12vw,52px);
+    background:var(--paper);border:0;border-radius:0;color:var(--ink);
+    box-shadow:0 6px 0 var(--line);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .06s,box-shadow .06s,background .12s}
+.pk:active{transform:translateY(6px);box-shadow:0 0 0 var(--line)}
+.pk:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.pk.ok{background:var(--grass);box-shadow:0 6px 0 var(--grass-d)}
+.pk.no{background:var(--red);box-shadow:0 6px 0 var(--red-d)}
+.result{flex:1;min-height:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:14px;text-align:center}
+.result .medal{font-size:clamp(64px,24vw,110px);line-height:1}
+.result .big{font-family:var(--f-pix);font-size:clamp(34px,11vw,52px);color:var(--ink);
+             font-variant-numeric:tabular-nums}
+.result .cap{font-size:17px;color:var(--ink);line-height:1.45;max-width:30ch}
+.result .rec{font-family:var(--f-pix);font-size:19px;color:var(--ink);
+             background:var(--gold);padding:6px 14px;box-shadow:0 4px 0 var(--gold-d)}
+.ladder{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;
+        background:var(--paper);padding:10px;box-shadow:0 5px 0 var(--line);width:100%}
+.rung{display:flex;flex-direction:column;align-items:center;gap:2px;
+      font-size:12px;color:var(--ink-dim);opacity:.4;min-width:56px}
+.rung.got{opacity:1;color:var(--ink)}
+.rung .e{font-size:24px;line-height:1}
+
+/* ---------- немая e: минимальные пары ---------- */
+.mrow{display:flex;align-items:stretch;gap:8px}
+.mside{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+       background:var(--paper);box-shadow:0 5px 0 var(--line);
+       border:0;border-radius:0;padding:10px 6px;cursor:pointer;color:var(--ink);
+       font-family:var(--f-read);transition:transform .06s,box-shadow .06s}
+.mside:active{transform:translateY(5px);box-shadow:0 0 0 var(--line)}
+.mside:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.mside.long{background:var(--paper-2)}
+.mem{font-size:28px;line-height:1}
+.mw{font-weight:700;font-size:26px;letter-spacing:2px}
+.mw b{color:var(--gold-ink);border-bottom:4px solid var(--gold)}
+.mru{font-size:12px;color:var(--ink-dim)}
+.marrow{align-self:center;font-size:20px;color:var(--ink-dim)}
+
+/* ---------- фразы ---------- */
+.frow{display:flex;flex-direction:column;gap:6px;
+      background:var(--paper);box-shadow:0 5px 0 var(--line);padding:12px 14px}
+.fhead{display:flex;align-items:center;gap:10px}
+.fem{font-size:30px;line-height:1;flex:0 0 auto}
+.fplay{margin-left:auto;flex:0 0 auto;min-height:44px;padding:8px 14px;font-size:16px}
+.fwords{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.pw{font-family:var(--f-read);font-weight:700;font-size:22px;letter-spacing:1px;
+    background:transparent;border:0;border-radius:0;color:var(--ink);
+    padding:2px 4px;cursor:pointer;box-shadow:0 3px 0 var(--line)}
+.pw:active{transform:translateY(3px);box-shadow:0 0 0 var(--line)}
+.pw:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.pw.tricky{color:var(--gold-ink);box-shadow:0 3px 0 var(--gold)}
+.fru{font-size:14px;color:var(--ink-dim);line-height:1.35}
+.flock{font-size:14px;color:var(--ink);background:var(--paper-2);
+       padding:10px 12px;box-shadow:0 4px 0 var(--line);line-height:1.4}
+
+/* ---------- читай вслух ---------- */
+.blk.lava{background:var(--lava);box-shadow:0 6px 0 var(--lava-d)}
+.blk.lava:active{box-shadow:0 0 0 var(--lava-d)}
+.aloud{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:14px;background:var(--paper);
+       box-shadow:0 6px 0 var(--line);padding:18px 14px;text-align:center}
+.acap{font-size:15px;color:var(--ink-dim);line-height:1.4;max-width:28ch}
+.aword{font-family:var(--f-read);font-weight:700;letter-spacing:3px;
+       font-size:clamp(44px,15vw,76px);line-height:1.1;color:var(--ink);word-break:break-word}
+.aru{font-size:18px;color:var(--ink-dim);min-height:24px}
+.agrade{display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+.agrade .blk{min-height:56px;font-size:17px}
+.streakb{font-family:var(--f-read);font-weight:700;font-size:13px;
+         background:var(--lava);color:var(--ink);padding:1px 7px;margin-left:6px;
+         white-space:nowrap}
+
+/* ---------- для родителей ---------- */
+.pbtn{width:44px;min-height:44px;flex:0 0 44px;padding:0;font-size:20px;
+      background:var(--paper);border:0;border-radius:0;
+      box-shadow:0 4px 0 var(--line);cursor:pointer}
+.pbtn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.pbtn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.pstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pstat div{background:var(--paper);padding:10px 6px;box-shadow:0 4px 0 var(--line);
+           display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.pstat b{font-family:var(--f-pix);font-size:24px;color:var(--ink);
+         font-variant-numeric:tabular-nums}
+.pstat span{font-size:11px;color:var(--ink-dim);line-height:1.25}
+.prow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+      background:var(--paper);box-shadow:0 4px 0 var(--line);
+      border:0;border-radius:0;padding:9px 12px;cursor:pointer;color:var(--ink);
+      font-family:var(--f-read)}
+.prow:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.prow:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.pem{font-size:24px;flex:0 0 auto}
+.ptxt{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.pw2{font-weight:700;font-size:20px;letter-spacing:1px}
+.psub{font-size:12px;color:var(--ink-dim)}
+.pplay{font-size:18px;flex:0 0 auto}
+.pcode{width:100%;font-family:ui-monospace,monospace;font-size:11px;line-height:1.35;
+       background:var(--paper);color:var(--ink);border:0;border-radius:0;
+       box-shadow:inset 0 0 0 2px var(--line);padding:8px;resize:none;
+       -webkit-user-select:text;user-select:text}
+
+/* ---------- тексты ---------- */
+.thead{display:flex;align-items:center;gap:12px;background:var(--paper);
+       padding:10px 12px;box-shadow:0 5px 0 var(--line)}
+.tem{font-size:34px;line-height:1}
+.tru{font-size:16px;color:var(--ink-dim)}
+.tline{display:flex;align-items:flex-start;gap:10px;background:var(--paper);
+       padding:10px 12px;box-shadow:0 5px 0 var(--line)}
+.tplay{flex:0 0 auto;min-height:44px;width:52px;padding:6px;font-size:18px}
+.tq{background:var(--paper-2);padding:12px 14px;box-shadow:0 5px 0 var(--line);
+    display:flex;flex-direction:column;gap:10px}
+.qask{font-size:16px;font-weight:700;color:var(--ink);line-height:1.35}
+.topts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.topt{aspect-ratio:1;font-size:clamp(30px,10vw,42px);background:var(--paper);
+      border:0;border-radius:0;box-shadow:0 5px 0 var(--line);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:transform .06s,box-shadow .06s,background .12s}
+.topt:active{transform:translateY(5px);box-shadow:0 0 0 var(--line)}
+.topt:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.topt.ok{background:var(--grass);box-shadow:0 5px 0 var(--grass-d)}
+.topt.no{background:var(--red);box-shadow:0 5px 0 var(--red-d);animation:shake .3s}
+.qok{font-family:var(--f-pix);font-size:16px;color:var(--grass-ink)}
+
+/* ---------- дуэль ---------- */
+.modes .blk small{font-family:var(--f-read);font-weight:400;font-size:12px;
+                  display:block;margin-top:2px;opacity:.8}
+.pside{display:flex;flex-direction:column;gap:8px;
+       background:var(--paper);padding:10px 12px;box-shadow:0 5px 0 var(--line)}
+.plabel{font-family:var(--f-pix);font-size:16px;color:var(--ink)}
+.plabel b{font-size:22px}
+.avrow{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.av{aspect-ratio:1;font-size:clamp(22px,7vw,30px);
+    background:var(--paper-2);border:0;border-radius:0;color:var(--ink);
+    box-shadow:0 4px 0 var(--line);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .06s,box-shadow .06s}
+.av:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.av:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.av.on{background:var(--gold);box-shadow:0 4px 0 var(--gold-d)}
+.versus{display:flex;align-items:center;justify-content:center;gap:12px;width:100%}
+.pcard{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+       background:var(--paper);padding:16px 8px;box-shadow:0 6px 0 var(--line)}
+.pcard.won{background:var(--gold);box-shadow:0 6px 0 var(--gold-d)}
+.pcard .crown{position:absolute;top:-16px;font-size:26px}
+.pav{font-size:clamp(38px,13vw,56px);line-height:1}
+.pscore{font-family:var(--f-pix);font-size:clamp(30px,10vw,44px);color:var(--ink);
+        font-variant-numeric:tabular-nums}
+.vs{font-family:var(--f-pix);font-size:28px;color:var(--ink)}
+
+/* ---------- служебное ---------- */
+.warn{background:var(--gold);color:var(--ink);padding:12px 14px;font-size:14px;
+      line-height:1.45;flex:0 0 auto;box-shadow:0 5px 0 var(--gold-d)}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+<canvas id="clouds"></canvas>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   1. ДАННЫЕ
+
+   Порядок групп — Jolly Phonics. Три правила отбора слова:
+   1) слово состоит только из уже пройденных букв и читается
+      строго по правилам;
+   2) слово есть хотя бы в одном из двух списков, по которым во всём
+      мире учат читать детей этого возраста:
+      • Cambridge English Pre A1 Starters — официальный словарь
+        первой ступени английского для 7–9 лет, около 500 слов;
+      • Dolch sight words — 220 самых частых слов детских книг,
+        на них приходится больше половины любого текста.
+      Частотное слово, которое уже читается по правилам, — самое
+      выгодное: усилие одно, а встречается оно каждый день;
+   3) при прочих равных берём самое обиходное — то, которое
+      ребёнок уже знает по-русски и назовёт, глядя на картинку.
+   ============================================================ */
+
+const GROUPS = [
+{
+  id:1, name:'Группа 1',
+  letters:[
+    { l:'s', ipa:'/s/', word:'sun',    ru:'солнце',    em:'☀️',
+      fact:'Sun — солнце. Тяни звук долго: сссс, как будто шипит вода на сковороде.' },
+    { l:'a', ipa:'/æ/', word:'apple',  ru:'яблоко',    em:'🍎',
+      fact:'Apple — яблоко. Рот открывается широко, как перед укусом: /æ/.' },
+    { l:'t', ipa:'/t/', word:'tree',   ru:'дерево',    em:'🌳',
+      fact:'Tree — дерево. Звук короткий, язык стучит по нёбу один раз.' },
+    { l:'i', ipa:'/ɪ/', word:'insect', ru:'насекомое', em:'🐞',
+      fact:'Insect — насекомое. Звук короткий: не «и», а /ɪ/, как будто торопишься.' },
+    { l:'p', ipa:'/p/', word:'pen',    ru:'ручка',     em:'🖊️',
+      fact:'Pen — ручка. Губы хлопают, как маленький взрыв воздуха.' },
+    { l:'n', ipa:'/n/', word:'nose',   ru:'нос',       em:'👃',
+      fact:'Nose — нос. Звук идёт через нос — потрогай его, он гудит.' },
+  ],
+  words:[
+    { w:'sit', em:'🧎', ru:'сиди',      hint:'Sit down — садись.' },
+    { w:'sat', em:'💺', ru:'сидел',     hint:'I sat — я сидел.' },
+    /* it, in, at, an — из первой десятки Dolch. Самые частые слова
+       языка, и все четыре читаются по правилам уже после первой группы */
+    { w:'it',  em:'👉', ru:'оно',       hint:'It is hot. — Оно горячее.' },
+    { w:'in',  em:'📥', ru:'в',         hint:'In the box — в коробке.' },
+    { w:'at',  em:'📍', ru:'у, в',      hint:'At home — дома.' },
+    { w:'an',  em:'1️⃣', ru:'один',      hint:'An ant — один муравей.' },
+    { w:'pan', em:'🍳', ru:'сковорода', hint:'На pan жарят яичницу.' },
+    { w:'tap', em:'🚰', ru:'кран',      hint:'Из tap течёт вода.' },
+    { w:'pin', em:'📌', ru:'булавка',   hint:'Pin — булавка или кнопка.' },
+    { w:'ant', em:'🐜', ru:'муравей',   hint:'Ant — муравей.' },
+    { w:'nap', em:'😴', ru:'подремать', hint:'Take a nap — поспать днём.' },
+    { w:'spin',em:'🌀', ru:'крутиться', hint:'Spin — крутиться волчком.' },
+    { w:'snap',em:'🫰', ru:'щёлк',      hint:'Snap — щелчок пальцами.' },
+  ]
+},
+{
+  id:2, name:'Группа 2',
+  letters:[
+    { l:'c', ipa:'/k/', word:'cat',    ru:'кот',     em:'🐱',
+      fact:'Cat — кот. Звук рождается в самом горле.' },
+    { l:'k', ipa:'/k/', word:'key',    ru:'ключ',    em:'🔑',
+      fact:'Key — ключ. Хитрость английского: c и k звучат одинаково — /k/.' },
+    { l:'e', ipa:'/e/', word:'egg',    ru:'яйцо',    em:'🥚',
+      fact:'Egg — яйцо. Рот приоткрыт чуть-чуть: /e/, как в русском «этот».' },
+    { l:'h', ipa:'/h/', word:'house',  ru:'дом',     em:'🏠',
+      fact:'House — дом. Просто выдох, без голоса: /h/.' },
+    { l:'r', ipa:'/r/', word:'rabbit', ru:'кролик',  em:'🐰',
+      fact:'Rabbit — кролик. Язык не дрожит, как в русском «р», а просто загибается.' },
+    { l:'m', ipa:'/m/', word:'milk',   ru:'молоко',  em:'🥛',
+      fact:'Milk — молоко. Губы сомкнуты, звук гудит: мммм.' },
+    { l:'d', ipa:'/d/', word:'dog',    ru:'собака',  em:'🐕',
+      fact:'Dog — собака. Как /t/, только с голосом.' },
+  ],
+  words:[
+    { w:'cat',  em:'🐱', ru:'кот',     hint:'Cat — кот.' },
+    { w:'dad',  em:'🧔', ru:'папа',    hint:'Dad — папа.' },
+    { w:'hand', em:'✋', ru:'рука',    hint:'Hand — рука, кисть.' },
+    { w:'pen',  em:'🖊️', ru:'ручка',   hint:'Дай мне pen — дай ручку.' },
+    { w:'hat',  em:'🎩', ru:'шапка',   hint:'Hat — шапка или кепка.' },
+    { w:'red',  em:'🔴', ru:'красный', hint:'Red — красный цвет.' },
+    { w:'ten',  em:'🔟', ru:'десять',  hint:'Ten — десять.' },
+    { w:'hen',  em:'🐔', ru:'курица',  hint:'Hen несёт яйца.' },
+    { w:'pet',  em:'🐹', ru:'питомец', hint:'Pet — домашнее животное.' },
+    { w:'man',  em:'👨', ru:'мужчина', hint:'Man — один, men — много.' },
+    { w:'men',  em:'👬', ru:'мужчины', hint:'Two men — двое мужчин.' },
+    { w:'kid',  em:'🧒', ru:'ребёнок', hint:'Kid — ребёнок.' },
+    { w:'sad',  em:'😢', ru:'грустный',hint:'I am sad — мне грустно.' },
+    { w:'map',  em:'🗺️', ru:'карта',   hint:'Map — карта.' },
+    { w:'can',  em:'🥤', ru:'банка',   hint:'Can — банка газировки.' },
+    { w:'cap',  em:'🧢', ru:'кепка',   hint:'Cap — кепка с козырьком.' },
+    { w:'desk', em:'🪑', ru:'парта',   hint:'Desk — парта или письменный стол.' },
+    { w:'rat',  em:'🐀', ru:'крыса',   hint:'Rat — крыса.' },
+    { w:'net',  em:'🥅', ru:'сетка',   hint:'Мяч в net — гол.' },
+    { w:'kit',  em:'🧰', ru:'набор',   hint:'Kit — набор вещей.' },
+    { w:'mad',  em:'😠', ru:'сердитый',hint:'He is mad — он сердится.' },
+    { w:'sand', em:'🏖️', ru:'песок',   hint:'Sand — песок на пляже.' },
+    { w:'mask', em:'😷', ru:'маска',   hint:'Mask — маска на лице.' },
+    { w:'pick', em:'👆', ru:'выбрать', hint:'Pick one — выбери одну. Буквы ck — один звук /k/.' },
+    { w:'neck', em:'🦒', ru:'шея',     hint:'Neck — шея.' },
+    /* and — третье по частоте слово английского языка (Dolch) */
+    { w:'and',  em:'➕', ru:'и',        hint:'Mum and dad — мама и папа.' },
+    { w:'am',   em:'🙋', ru:'я есть',   hint:'I am eight. — Мне восемь.' },
+    { w:'did',  em:'✔️', ru:'сделал',   hint:'I did it! — Я это сделал!' },
+    { w:'him',  em:'👦', ru:'ему',      hint:'Help him — помоги ему.' },
+    { w:'ran',  em:'🏃', ru:'побежал',  hint:'He ran home — он побежал домой.' },
+    { w:'mat',  em:'🟫', ru:'коврик',   hint:'The cat is on the mat — кот на коврике.' },
+  ]
+},
+{
+  id:3, name:'Группа 3',
+  letters:[
+    { l:'g', ipa:'/g/', word:'girl',     ru:'девочка', em:'👧',
+      fact:'Girl — девочка. Как /k/, только с голосом.' },
+    { l:'o', ipa:'/ɒ/', word:'orange',   ru:'апельсин',em:'🍊',
+      fact:'Orange — апельсин. Короткое «о», рот круглый.' },
+    { l:'u', ipa:'/ʌ/', word:'umbrella', ru:'зонт',    em:'☂️',
+      fact:'Umbrella — зонт. Звук между «а» и «э», рот почти не двигается.' },
+    { l:'l', ipa:'/l/', word:'leg',      ru:'нога',    em:'🦵',
+      fact:'Leg — нога. Кончик языка прижат к нёбу за зубами.' },
+    { l:'f', ipa:'/f/', word:'fish',     ru:'рыба',    em:'🐟',
+      fact:'Fish — рыба. Верхние зубы на нижней губе, воздух шипит.' },
+    { l:'b', ipa:'/b/', word:'book',     ru:'книга',   em:'📖',
+      fact:'Book — книга. Как /p/, только с голосом. Потрогай горло — дрожит.' },
+  ],
+  words:[
+    { w:'dog',   em:'🐕', ru:'собака',   hint:'Dog — собака.' },
+    { w:'sun',   em:'☀️', ru:'солнце',   hint:'Sun — солнце.' },
+    { w:'cup',   em:'☕', ru:'чашка',    hint:'Cup — чашка или стакан.' },
+    { w:'glass', em:'🥃', ru:'стакан',   hint:'Glass — стакан. Две s читаются как одна.' },
+    { w:'milk',  em:'🥛', ru:'молоко',   hint:'A glass of milk — стакан молока.' },
+    { w:'bed',   em:'🛏️', ru:'кровать',  hint:'Go to bed — иди спать.' },
+    { w:'bus',   em:'🚌', ru:'автобус',  hint:'Bus — автобус.' },
+    { w:'bag',   em:'🎒', ru:'сумка',    hint:'Bag — сумка, рюкзак.' },
+    { w:'leg',   em:'🦵', ru:'нога',     hint:'Leg — нога.' },
+    { w:'mum',   em:'👩', ru:'мама',     hint:'Mum — мама.' },
+    { w:'big',   em:'🐘', ru:'большой',  hint:'A big dog — большая собака.' },
+    { w:'run',   em:'🏃', ru:'бежать',   hint:'Run! — Беги!' },
+    { w:'stop',  em:'🛑', ru:'стой',     hint:'Stop — стой, стоп.' },
+    { w:'help',  em:'🆘', ru:'помощь',   hint:'Help me — помоги мне.' },
+    { w:'cut',   em:'✂️', ru:'резать',   hint:'Cut — резать ножницами.' },
+    { w:'hot',   em:'🔥', ru:'горячий',  hint:'Hot — горячий.' },
+    { w:'pot',   em:'🍲', ru:'кастрюля', hint:'Pot — кастрюля.' },
+    { w:'duck',  em:'🦆', ru:'утка',     hint:'Duck — утка.' },
+    { w:'frog',  em:'🐸', ru:'лягушка',  hint:'Frog — лягушка.' },
+    { w:'sock',  em:'🧦', ru:'носок',    hint:'Sock — носок.' },
+    { w:'clock', em:'🕐', ru:'часы',     hint:'Clock — часы на стене.' },
+    { w:'doll',  em:'🪆', ru:'кукла',    hint:'Doll — кукла. Две l читаются как одна.' },
+    { w:'drum',  em:'🥁', ru:'барабан',  hint:'Drum — барабан.' },
+    { w:'flag',  em:'🚩', ru:'флаг',     hint:'Flag — флаг.' },
+    /* on, up, not, but, get, got — первая сотня Dolch */
+    { w:'on',    em:'⬆️', ru:'на',      hint:'On the bed — на кровати.' },
+    { w:'up',    em:'🔼', ru:'вверх',   hint:'Get up! — Вставай!' },
+    { w:'not',   em:'🚫', ru:'не',      hint:'It is not hot. — Не горячо.' },
+    { w:'but',   em:'↔️', ru:'но',      hint:'Big but cute — большой, но милый.' },
+    { w:'get',   em:'🤲', ru:'взять',   hint:'Get the bag — возьми сумку.' },
+    { w:'got',   em:'🎯', ru:'взял',    hint:'I got it — я это взял.' },
+    { w:'fun',   em:'🎉', ru:'весело',  hint:'It is fun! — Это весело!' },
+    { w:'fell',  em:'🤕', ru:'упал',    hint:'He fell — он упал.' },
+    { w:'log',   em:'🪵', ru:'бревно',  hint:'Log — бревно.' },
+    { w:'bun',   em:'🥯', ru:'булочка', hint:'Bun — булочка.' },
+    { w:'bin',   em:'🗑️', ru:'мусорка', hint:'Bin — мусорное ведро.' },
+    { w:'lamp',  em:'💡', ru:'лампа',   hint:'Lamp — лампа.' },
+    { w:'egg',   em:'🥚', ru:'яйцо',    hint:'Теперь читается слово с карточки буквы e.' },
+    { w:'fast',  em:'🏎️', ru:'быстро',  hint:'Run fast! — Беги быстро!' },
+  ]
+},
+{
+  id:4, name:'Группа 4',
+  letters:[
+    { l:'ai', ipa:'/eɪ/', word:'rain', ru:'дождь',  em:'🌧️',
+      fact:'Rain — дождь. Две буквы, один звук: a и i вместе читаются «эй».' },
+    { l:'j',  ipa:'/dʒ/', word:'jam',  ru:'варенье',em:'🍓',
+      fact:'Jam — варенье. Звук как в русском «джем» — это то же слово.' },
+    { l:'oa', ipa:'/əʊ/', word:'boat', ru:'лодка',  em:'⛵',
+      fact:'Boat — лодка. o и a вместе читаются «оу», губы вытягиваются трубочкой.' },
+    { l:'ie', ipa:'/aɪ/', word:'pie',  ru:'пирог',  em:'🥧',
+      fact:'Pie — пирог. i и e вместе читаются «ай».' },
+    { l:'ee', ipa:'/iː/', word:'bee',  ru:'пчела',  em:'🐝',
+      fact:'Bee — пчела. Две e дают долгое «и-и-и», как писк комара.' },
+    { l:'or', ipa:'/ɔː/', word:'fork', ru:'вилка',  em:'🍴',
+      fact:'Fork — вилка. o и r вместе дают долгое «о», рот круглый.' },
+  ],
+  words:[
+    { w:'rain',  em:'🌧️', ru:'дождь',    hint:'It is rain — идёт дождь.' },
+    { w:'train', em:'🚆', ru:'поезд',    hint:'Train — поезд.' },
+    { w:'boat',  em:'⛵', ru:'лодка',    hint:'Boat — лодка.' },
+    { w:'coat',  em:'🧥', ru:'пальто',   hint:'Coat — пальто, куртка.' },
+    { w:'goat',  em:'🐐', ru:'коза',     hint:'Goat — коза.' },
+    { w:'road',  em:'🛣️', ru:'дорога',   hint:'Road — дорога.' },
+    { w:'tree',  em:'🌳', ru:'дерево',   hint:'Теперь ты можешь прочитать слово с карточки буквы t.' },
+    { w:'bee',   em:'🐝', ru:'пчела',    hint:'Bee — пчела.' },
+    { w:'see',   em:'👀', ru:'видеть',   hint:'I see you — я тебя вижу.' },
+    { w:'feet',  em:'🦶', ru:'ступни',   hint:'Foot — одна, feet — обе.' },
+    { w:'green', em:'💚', ru:'зелёный',  hint:'Green — зелёный.' },
+    { w:'sleep', em:'🛌', ru:'спать',    hint:'Go to sleep — иди спать.' },
+    { w:'pie',   em:'🥧', ru:'пирог',    hint:'Pie — пирог.' },
+    { w:'tie',   em:'👔', ru:'галстук',  hint:'Tie — галстук.' },
+    { w:'fork',  em:'🍴', ru:'вилка',    hint:'Fork — вилка.' },
+    { w:'corn',  em:'🌽', ru:'кукуруза', hint:'Corn — кукуруза.' },
+    { w:'sport', em:'⚽', ru:'спорт',    hint:'Sport — спорт.' },
+    { w:'storm', em:'🌩️', ru:'гроза',    hint:'Storm — гроза, буря.' },
+    { w:'jam',   em:'🍓', ru:'варенье',  hint:'Jam — варенье.' },
+    { w:'jump',  em:'🤸', ru:'прыгать',  hint:'Jump! — Прыгай!' },
+    { w:'jet',   em:'✈️', ru:'самолёт',  hint:'Jet — реактивный самолёт.' },
+    { w:'for',   em:'➡️', ru:'для',      hint:'For you — для тебя.' },
+    { w:'paint', em:'🎨', ru:'краски',   hint:'Paint — краски, рисовать красками.' },
+    { w:'jeans', em:'👖', ru:'джинсы',   hint:'Jeans — джинсы.' },
+  ]
+},
+{
+  id:5, name:'Группа 5',
+  letters:[
+    { l:'z',  ipa:'/z/',  word:'zoo',   ru:'зоопарк', em:'🦁',
+      fact:'Zoo — зоопарк. Как /s/, только с голосом: зззз, как жужжание.' },
+    { l:'w',  ipa:'/w/',  word:'water', ru:'вода',    em:'💧',
+      fact:'Water — вода. Губы вытягиваются вперёд трубочкой, как для «у».' },
+    { l:'ng', ipa:'/ŋ/',  word:'king',  ru:'король',  em:'👑',
+      fact:'King — король. Звук идёт через нос, язык прижат сзади.' },
+    { l:'v',  ipa:'/v/',  word:'van',   ru:'фургон',  em:'🚐',
+      fact:'Van — фургон. Как /f/, только с голосом. Потрогай горло — дрожит.' },
+    { l:'oo', ipa:'/uː/', word:'moon',  ru:'луна',    em:'🌙',
+      fact:'Moon — луна. Две o дают долгое «у». Иногда они звучат коротко (book) — это будет позже.' },
+  ],
+  words:[
+    { w:'zoo',   em:'🦁', ru:'зоопарк',   hint:'Zoo — зоопарк.' },
+    { w:'moon',  em:'🌙', ru:'луна',      hint:'Moon — луна.' },
+    { w:'food',  em:'🍔', ru:'еда',       hint:'Food — еда.' },
+    { w:'room',  em:'🚪', ru:'комната',   hint:'My room — моя комната.' },
+    { w:'soon',  em:'⏳', ru:'скоро',     hint:'See you soon — до скорого.' },
+    { w:'spoon', em:'🥄', ru:'ложка',     hint:'Spoon — ложка.' },
+    { w:'pool',  em:'🏊', ru:'бассейн',   hint:'Pool — бассейн.' },
+    { w:'cool',  em:'🧊', ru:'прохладный',hint:'Cool — прохладный. Ещё говорят «круто».' },
+    { w:'king',  em:'👑', ru:'король',    hint:'King — король.' },
+    { w:'ring',  em:'💍', ru:'кольцо',    hint:'Ring — кольцо.' },
+    { w:'song',  em:'🎵', ru:'песня',     hint:'Song — песня.' },
+    { w:'long',  em:'📏', ru:'длинный',   hint:'A long road — длинная дорога.' },
+    { w:'wing',  em:'🪽', ru:'крыло',     hint:'Wing — крыло.' },
+    { w:'van',   em:'🚐', ru:'фургон',    hint:'Van — фургон.' },
+    { w:'vet',   em:'🩺', ru:'ветеринар', hint:'Vet лечит животных.' },
+    { w:'win',   em:'🏆', ru:'победить',  hint:'I win! — Я выиграл!' },
+    { w:'wet',   em:'💧', ru:'мокрый',    hint:'Wet — мокрый.' },
+    { w:'web',   em:'🕸️', ru:'паутина',   hint:'Web — паутина.' },
+    { w:'wind',  em:'💨', ru:'ветер',     hint:'Wind — ветер.' },
+    { w:'swim',  em:'🏊', ru:'плавать',  hint:'I can swim — я умею плавать.' },
+    { w:'sing',  em:'🎤', ru:'петь',     hint:'Sing a song — спой песню.' },
+    { w:'went',  em:'🚶', ru:'пошёл',    hint:'We went home — мы пошли домой.' },
+    { w:'will',  em:'🔮', ru:'буду',     hint:'I will win — я выиграю.' },
+    { w:'well',  em:'💯', ru:'хорошо',   hint:'Well done! — Молодец!' },
+  ]
+},
+{
+  id:6, name:'Группа 6',
+  letters:[
+    { l:'y',  ipa:'/j/',  word:'yes',   ru:'да',       em:'👍',
+      fact:'Yes — да. Звук как русское «й» в начале слова.' },
+    { l:'x',  ipa:'/ks/', word:'box',   ru:'коробка',  em:'📦',
+      fact:'Box — коробка. Одна буква, а звука сразу два: к и с слитно.' },
+    { l:'ch', ipa:'/tʃ/', word:'chips', ru:'картошка фри', em:'🍟',
+      fact:'Chips — картошка фри. c и h вместе дают «ч».' },
+    { l:'sh', ipa:'/ʃ/',  word:'ship',  ru:'корабль',  em:'🚢',
+      fact:'Ship — корабль. s и h вместе дают «ш» — как просьба помолчать.' },
+    { l:'th', ipa:'/θ/',  word:'three', ru:'три',      em:'3️⃣',
+      fact:'Three — три. Кончик языка между зубами, воздух проходит через щель.' },
+  ],
+  words:[
+    { w:'yes',   em:'👍', ru:'да',        hint:'Yes — да.' },
+    { w:'fish',  em:'🐟', ru:'рыба',      hint:'Теперь читается слово с карточки буквы f.' },
+    { w:'ship',  em:'🚢', ru:'корабль',   hint:'Ship — корабль.' },
+    { w:'shop',  em:'🏪', ru:'магазин',   hint:'Shop — магазин.' },
+    { w:'shell', em:'🐚', ru:'ракушка',   hint:'Shell — ракушка.' },
+    { w:'brush', em:'🪥', ru:'щётка',     hint:'Brush — щётка.' },
+    { w:'fresh', em:'🥗', ru:'свежий',    hint:'Fresh — свежий.' },
+    { w:'chips', em:'🍟', ru:'картошка',  hint:'Chips — картошка фри.' },
+    { w:'chess', em:'♟️', ru:'шахматы',   hint:'Chess — шахматы.' },
+    { w:'lunch', em:'🍱', ru:'обед',      hint:'Lunch — обед.' },
+    { w:'this',  em:'👉', ru:'этот',      hint:'This cat — этот кот.' },
+    { w:'that',  em:'👈', ru:'тот',       hint:'That dog — та собака.' },
+    { w:'with',  em:'🤝', ru:'с',         hint:'With me — со мной.' },
+    { w:'three', em:'3️⃣', ru:'три',       hint:'Three — три.' },
+    { w:'teeth', em:'🦷', ru:'зубы',      hint:'Tooth — один, teeth — все.' },
+    { w:'bath',  em:'🛁', ru:'ванна',     hint:'Bath — ванна.' },
+    { w:'box',   em:'📦', ru:'коробка',   hint:'Box — коробка.' },
+    { w:'fox',   em:'🦊', ru:'лиса',      hint:'Fox — лиса.' },
+    { w:'six',   em:'6️⃣', ru:'шесть',     hint:'Six — шесть.' },
+    { w:'mix',   em:'🥣', ru:'смешать',   hint:'Mix it — перемешай.' },
+    { w:'fix',   em:'🔧', ru:'чинить',   hint:'Fix the car — почини машину.' },
+    { w:'shorts',em:'🩳', ru:'шорты',    hint:'Shorts — шорты.' },
+    { w:'catch', em:'🥎', ru:'ловить',   hint:'Catch the ball — лови мяч.' },
+    { w:'think', em:'🤔', ru:'думать',   hint:'I think so — я так думаю.' },
+    { w:'thank', em:'🙏', ru:'спасибо',  hint:'Thank you — спасибо.' },
+    { w:'then',  em:'➡️', ru:'потом',    hint:'And then — а потом.' },
+    { w:'them',  em:'👥', ru:'их',       hint:'Help them — помоги им.' },
+  ]
+},
+{
+  id:7, name:'Группа 7',
+  letters:[
+    { l:'qu', ipa:'/kw/', word:'queen',  ru:'королева', em:'👸',
+      fact:'Queen — королева. q без u в английском не ходит — они всегда вместе.' },
+    { l:'ou', ipa:'/aʊ/', word:'mouth',  ru:'рот',      em:'👄',
+      fact:'Mouth — рот. o и u вместе кричат «ау».' },
+    { l:'oi', ipa:'/ɔɪ/', word:'coin',   ru:'монета',   em:'🪙',
+      fact:'Coin — монета. o и i вместе дают «ой».' },
+    { l:'ue', ipa:'/uː/', word:'blue',   ru:'синий',    em:'🔵',
+      fact:'Blue — синий. u и e на конце дают долгое «у».' },
+    { l:'er', ipa:'/ə/',  word:'sister', ru:'сестра',   em:'👭',
+      fact:'Sister — сестра. На конце слова er звучит слабо, почти проглатывается.' },
+    { l:'ar', ipa:'/ɑː/', word:'car',    ru:'машина',   em:'🚗',
+      fact:'Car — машина. a и r вместе дают долгое «а», рот широко открыт.' },
+  ],
+  words:[
+    { w:'car',    em:'🚗', ru:'машина',    hint:'Car — машина.' },
+    { w:'star',   em:'🌟', ru:'звезда',    hint:'Star — звезда.' },
+    { w:'park',   em:'🏞️', ru:'парк',      hint:'Park — парк.' },
+    { w:'dark',   em:'🌑', ru:'тёмный',    hint:'It is dark — темно.' },
+    { w:'farm',   em:'🚜', ru:'ферма',     hint:'Farm — ферма.' },
+    { w:'arm',    em:'💪', ru:'рука',      hint:'Arm — рука целиком, hand — кисть.' },
+    { w:'card',   em:'🃏', ru:'карточка',  hint:'Card — карточка.' },
+    { w:'sharp',  em:'🔪', ru:'острый',    hint:'Sharp — острый.' },
+    { w:'mouth',  em:'👄', ru:'рот',       hint:'Mouth — рот.' },
+    { w:'cloud',  em:'☁️', ru:'облако',    hint:'Cloud — облако.' },
+    { w:'sound',  em:'🔊', ru:'звук',      hint:'Sound — звук.' },
+    { w:'round',  em:'⭕', ru:'круглый',   hint:'Round — круглый.' },
+    { w:'count',  em:'🔢', ru:'считать',   hint:'Count to ten — считай до десяти.' },
+    { w:'coin',   em:'🪙', ru:'монета',    hint:'Coin — монета.' },
+    { w:'oil',    em:'🛢️', ru:'масло',     hint:'Oil — масло, нефть.' },
+    { w:'blue',   em:'🔵', ru:'синий',     hint:'Blue — синий.' },
+    { w:'glue',   em:'🧴', ru:'клей',      hint:'Glue — клей.' },
+    { w:'queen',  em:'👸', ru:'королева',  hint:'Queen — королева.' },
+    { w:'quick',  em:'⚡', ru:'быстрый',   hint:'Be quick! — Быстрее!' },
+    { w:'quiz',   em:'❓', ru:'викторина', hint:'Quiz — викторина, опрос.' },
+    { w:'sister', em:'👭', ru:'сестра',    hint:'Sister — сестра.' },
+    { w:'winter', em:'❄️', ru:'зима',      hint:'Winter — зима.' },
+    { w:'her',    em:'👧', ru:'её',      hint:'Her name — её имя.' },
+    { w:'under',  em:'🔽', ru:'под',     hint:'Under the bed — под кроватью.' },
+    { w:'out',    em:'🚪', ru:'наружу',  hint:'Go out — выйди наружу.' },
+    { w:'start',  em:'🏁', ru:'начать',  hint:'Start! — Начали!' },
+    { w:'garden', em:'🌻', ru:'сад',     hint:'In the garden — в саду.' },
+  ]
+},
+{
+  id:8, name:'Группа 8',
+  letters:[
+    { l:'a_e', ipa:'/eɪ/', word:'cake', ru:'торт',  em:'🎂',
+      fact:'Cake — торт. Немая e на конце заставляет a назвать своё имя: «эй».' },
+    { l:'i_e', ipa:'/aɪ/', word:'kite', ru:'змей',  em:'🪁',
+      fact:'Kite — воздушный змей. i под действием немой e говорит «ай».' },
+    { l:'o_e', ipa:'/əʊ/', word:'note', ru:'нота',  em:'🎼',
+      fact:'Note — записка или нота. o становится «оу».' },
+    { l:'u_e', ipa:'/juː/',word:'cube', ru:'кубик', em:'🎲',
+      fact:'Cube — кубик. u говорит «ю».' },
+    { l:'oo2', ipa:'/ʊ/',  word:'book', ru:'книга', em:'📖',
+      fact:'Book — книга. Те же две o, но звук короткий — не «у-у», а быстрое «у».' },
+  ],
+  words:[
+    { w:'cake',  em:'🎂', ru:'торт',       hint:'Cake — торт.' },
+    { w:'name',  em:'📛', ru:'имя',        hint:'My name is… — Меня зовут…' },
+    { w:'game',  em:'🎮', ru:'игра',       hint:'Game — игра.' },
+    { w:'plane', em:'🛩️', ru:'самолёт',    hint:'Plane — самолёт.' },
+    { w:'snake', em:'🐍', ru:'змея',       hint:'Snake — змея.' },
+    { w:'late',  em:'⏰', ru:'поздно',     hint:'I am late — я опоздал.' },
+    { w:'tape',  em:'📼', ru:'лента',      hint:'Tape — лента, скотч.' },
+    { w:'gate',  em:'🚧', ru:'ворота',     hint:'Gate — ворота, калитка.' },
+    { w:'kite',  em:'🪁', ru:'змей',       hint:'Kite — воздушный змей.' },
+    { w:'bike',  em:'🚲', ru:'велосипед',  hint:'Bike — велосипед.' },
+    { w:'time',  em:'⏱️', ru:'время',      hint:'Time — время.' },
+    { w:'five',  em:'5️⃣', ru:'пять',       hint:'Five — пять.' },
+    { w:'nine',  em:'9️⃣', ru:'девять',     hint:'Nine — девять.' },
+    { w:'smile', em:'😀', ru:'улыбка',     hint:'Smile — улыбка, улыбаться.' },
+    { w:'ride',  em:'🚴', ru:'кататься',   hint:'Ride a bike — кататься на велосипеде.' },
+    { w:'home',  em:'🏡', ru:'дом',        hint:'Go home — иди домой.' },
+    { w:'bone',  em:'🦴', ru:'кость',      hint:'Bone — кость.' },
+    { w:'stone', em:'🪨', ru:'камень',     hint:'Stone — камень.' },
+    { w:'rose',  em:'🌹', ru:'роза',       hint:'Rose — роза.' },
+    { w:'note',  em:'🎼', ru:'записка',    hint:'Note — записка или нота.' },
+    { w:'cube',  em:'🎲', ru:'кубик',      hint:'Cube — кубик.' },
+    { w:'tube',  em:'🧪', ru:'трубка',     hint:'Tube — трубка.' },
+    { w:'cute',  em:'🥰', ru:'милый',      hint:'Cute — милый.' },
+    { w:'book',  em:'📖', ru:'книга',  s:['b','oo2','k'],  hint:'Теперь читается слово с карточки буквы b.' },
+    { w:'look',  em:'👁️', ru:'смотреть',s:['l','oo2','k'], hint:'Look! — Смотри!' },
+    { w:'good',  em:'👌', ru:'хороший',s:['g','oo2','d'],  hint:'Good — хороший, хорошо.' },
+    { w:'cook',  em:'👨‍🍳', ru:'готовить',s:['c','oo2','k'], hint:'Cook — повар, готовить.' },
+    { w:'foot',  em:'👣', ru:'ступня', s:['f','oo2','t'],  hint:'Foot — одна ступня, feet — обе.' },
+    { w:'nose',  em:'👃', ru:'нос',      hint:'Теперь читается слово с карточки буквы n.' },
+    { w:'like',  em:'💗', ru:'нравится', hint:'I like it — мне это нравится.' },
+    { w:'make',  em:'🔨', ru:'делать',   hint:'Make a cake — испеки торт.' },
+    { w:'take',  em:'🫴', ru:'взять',    hint:'Take it — возьми.' },
+    { w:'made',  em:'🛠️', ru:'сделал',   hint:'I made it — я это сделал.' },
+  ]
+},
+];
+
+/* ------------------------------------------------------------
+   МИНИМАЛЬНЫЕ ПАРЫ ДЛЯ НЕМОЙ e
+   Правило показывают именно так — двумя словами рядом. Разница
+   в одной букве, и она слышна: cap и cape. Это и есть урок.
+   ------------------------------------------------------------ */
+const MAGIC_PAIRS = [
+  { a:'cap', ra:'кепка',    ea:'🧢', b:'cape', rb:'плащ',        eb:'🦸' },
+  { a:'kit', ra:'набор',    ea:'🧰', b:'kite', rb:'воздушный змей', eb:'🪁' },
+  { a:'tap', ra:'кран',     ea:'🚰', b:'tape', rb:'лента',       eb:'📼' },
+  { a:'pin', ra:'булавка',  ea:'📌', b:'pine', rb:'сосна',       eb:'🎄' },
+  { a:'mad', ra:'сердитый', ea:'😠', b:'made', rb:'сделал',      eb:'🔨' },
+  { a:'cut', ra:'резать',   ea:'✂️', b:'cute', rb:'милый',       eb:'🥰' },
+  { a:'not', ra:'не',       ea:'🚫', b:'note', rb:'записка',     eb:'🎼' },
+  { a:'tub', ra:'таз',      ea:'🛁', b:'tube', rb:'трубка',      eb:'🧪' },
+];
+
+/* ------------------------------------------------------------
+   СЛОВА-НЕВИДИМКИ (tricky words)
+   Читаются не по правилам, разбирать их по звукам бесполезно —
+   их узнают целиком, как знак на дороге. Но без них нельзя
+   составить ни одной фразы, поэтому идут отдельным списком.
+
+   Состав и порядок — наборы слов-невидимок Jolly Phonics: примерно
+   по шесть слов на каждую группу букв, ровно в той очерёдности,
+   в какой их даёт методика. Поле g — с какой группы слово открыто.
+   Вываливать полсотни слов на восьмилетнего сразу нельзя: он выучит
+   первые пять и закроет экран. Шесть за раз он уносит.
+
+   Слова, которые стали читаться по правилам, из списка ушли:
+   like, make, take, made теперь в группе 8 — их разбирают немой e,
+   а не запоминают целиком.
+   ------------------------------------------------------------ */
+const TRICKY = [
+  /* набор 1 */
+  { w:'I',    g:1, ru:'я',         ex:'I am eight. — Мне восемь.' },
+  { w:'a',    g:1, ru:'один',      ex:'a dog — одна собака' },
+  { w:'the',  g:1, ru:'этот',      ex:'the sun — то самое солнце' },
+  { w:'is',   g:1, ru:'есть',      ex:'It is red. — Оно красное.' },
+  { w:'he',   g:1, ru:'он',        ex:'He is big. — Он большой.' },
+  { w:'she',  g:1, ru:'она',       ex:'She can run. — Она умеет бегать.' },
+  { w:'me',   g:1, ru:'мне',       ex:'Give it to me. — Дай это мне.' },
+  { w:'we',   g:1, ru:'мы',        ex:'We go home. — Мы идём домой.' },
+  /* набор 2 */
+  { w:'my',   g:2, ru:'мой',       ex:'my cat — мой кот' },
+  { w:'be',   g:2, ru:'быть',      ex:'Be quick! — Быстрее!' },
+  { w:'was',  g:2, ru:'был',       ex:'It was hot. — Было жарко.' },
+  { w:'to',   g:2, ru:'к, в',      ex:'Go to bed. — Иди спать.' },
+  { w:'do',   g:2, ru:'делать',    ex:'I can do it. — Я могу это сделать.' },
+  { w:'has',  g:2, ru:'имеет',     ex:'He has a dog. — У него есть собака.' },
+  /* набор 3 */
+  { w:'are',  g:3, ru:'есть (мн.)',ex:'We are here. — Мы здесь.' },
+  { w:'all',  g:3, ru:'все',       ex:'All the cats. — Все коты.' },
+  { w:'you',  g:3, ru:'ты',        ex:'You and me. — Ты и я.' },
+  { w:'your', g:3, ru:'твой',      ex:'your bag — твоя сумка' },
+  { w:'go',   g:3, ru:'иди',       ex:'Go to bed. — Иди спать.' },
+  { w:'no',   g:3, ru:'нет',       ex:'No, stop! — Нет, стой!' },
+  /* набор 4 */
+  { w:'come', g:4, ru:'иди сюда',  ex:'Come here! — Иди сюда!' },
+  { w:'some', g:4, ru:'немного',   ex:'some milk — немного молока' },
+  { w:'said', g:4, ru:'сказал',    ex:'Dad said no. — Папа сказал нет.' },
+  { w:'here', g:4, ru:'здесь',     ex:'I am here. — Я здесь.' },
+  { w:'there',g:4, ru:'там',       ex:'It is there. — Оно там.' },
+  { w:'they', g:4, ru:'они',       ex:'They can swim. — Они умеют плавать.' },
+  /* набор 5 */
+  { w:'so',   g:5, ru:'так',       ex:'so big — такой большой' },
+  { w:'one',  g:5, ru:'один',      ex:'one cat — один кот' },
+  { w:'two',  g:5, ru:'два',       ex:'two dogs — две собаки' },
+  { w:'have', g:5, ru:'иметь',     ex:'I have a bike. — У меня есть велосипед.' },
+  { w:'old',  g:5, ru:'старый',    ex:'an old man — старик' },
+  { w:'put',  g:5, ru:'положить',  ex:'Put it in the box. — Положи это в коробку.' },
+  /* набор 6 */
+  { w:'give', g:6, ru:'дать',      ex:'Give me the pen. — Дай мне ручку.' },
+  { w:'live', g:6, ru:'жить',      ex:'I live here. — Я живу здесь.' },
+  { w:'little',g:6,ru:'маленький', ex:'a little cat — маленький котик' },
+  { w:'down', g:6, ru:'вниз',      ex:'Sit down. — Садись.' },
+  { w:'what', g:6, ru:'что',       ex:'What is it? — Что это?' },
+  { w:'when', g:6, ru:'когда',     ex:'When? — Когда?' },
+  /* набор 7 */
+  { w:'why',  g:7, ru:'почему',    ex:'Why not? — Почему нет?' },
+  { w:'where',g:7, ru:'где',       ex:'Where is my bag? — Где моя сумка?' },
+  { w:'who',  g:7, ru:'кто',       ex:'Who is it? — Кто это?' },
+  { w:'want', g:7, ru:'хотеть',    ex:'I want food. — Я хочу есть.' },
+  { w:'were', g:7, ru:'были',      ex:'We were there. — Мы были там.' },
+  { w:'any',  g:7, ru:'сколько-то',ex:'any cake? — хоть немного торта?' },
+  /* набор 8 */
+  { w:'more', g:8, ru:'больше',    ex:'more cake — ещё торта' },
+  { w:'other',g:8, ru:'другой',    ex:'the other one — другой' },
+  { w:'before',g:8,ru:'до',        ex:'before lunch — до обеда' },
+  { w:'love', g:8, ru:'любить',    ex:'I love you. — Я тебя люблю.' },
+  { w:'again',g:8, ru:'снова',     ex:'Do it again. — Сделай это снова.' },
+  { w:'once', g:8, ru:'однажды',   ex:'once a day — раз в день' },
+];
+
+/* ------------------------------------------------------------
+   ФРАЗЫ
+   Цель всего приложения. Каждая фраза собрана только из слов,
+   которые читаются по правилам, и из слов-невидимок. Ни одного
+   слова, которое пришлось бы угадывать.
+   ------------------------------------------------------------ */
+const PHRASES = [
+  { en:'The cat is on the bed.',     ru:'Кот на кровати.',              em:'🐱', cf:'bed' },
+  { en:'The sun is hot.',            ru:'Солнце горячее.',              em:'☀️', cf:'night' },
+  { en:'Go to bed!',                 ru:'Иди спать!',                   em:'🛏️', cf:'bed' },
+  { en:'She said no.',               ru:'Она сказала нет.',             em:'🙅' },
+  { en:'My dog has a bone.',         ru:'У моей собаки кость.',         em:'🦴' },
+  { en:'Dad is in the car.',         ru:'Папа в машине.',               em:'🚗' },
+  { en:'The frog is on a log.',      ru:'Лягушка на бревне.',           em:'🐸' },
+  { en:'We can win!',                ru:'Мы можем победить!',           em:'🏆' },
+  { en:'He can run fast.',           ru:'Он умеет быстро бегать.',      em:'🏃' },
+  { en:'My mum has a red hat.',      ru:'У мамы красная шапка.',        em:'🎩' },
+  { en:'I can see a big red bus.',   ru:'Я вижу большой красный автобус.', em:'🚌' },
+  { en:'The fish is in the net.',    ru:'Рыба в сетке.',                em:'🐟' },
+  { en:'We go to the shop.',         ru:'Мы идём в магазин.',           em:'🏪' },
+  { en:'The duck is in the pool.',   ru:'Утка в бассейне.',             em:'🦆' },
+  { en:'The king has a big ring.',   ru:'У короля большое кольцо.',     em:'👑' },
+  { en:'It was dark in the room.',   ru:'В комнате было темно.',        em:'🌑', cf:'night' },
+  { en:'Look at the moon.',          ru:'Посмотри на луну.',            em:'🌙', cf:'night' },
+  { en:'This is my home.',           ru:'Это мой дом.',                 em:'🏡' },
+  { en:'That box is big.',           ru:'Та коробка большая.',          em:'📦' },
+  { en:'He has five green pens.',    ru:'У него пять зелёных ручек.',   em:'🖊️' },
+  { en:'My sister has a doll.',      ru:'У сестры кукла.',              em:'🪆' },
+  { en:'She has a blue bike.',       ru:'У неё синий велосипед.',       em:'🚲' },
+  { en:'I can count to ten.',        ru:'Я умею считать до десяти.',    em:'🔢' },
+  { en:'The snake is on a stone.',   ru:'Змея на камне.',               em:'🐍' },
+  { en:'I like my cake.',            ru:'Мне нравится мой торт.',       em:'🎂' },
+  { en:'I can ride my bike to the park.', ru:'Я могу доехать до парка на велосипеде.', em:'🏞️' },
+  { en:'The ship has a big flag.',   ru:'На корабле большой флаг.',     em:'🚩' },
+  { en:'My sister can cook fish and chips.', ru:'Сестра умеет готовить рыбу с картошкой.', em:'🍟' },
+  { en:'Look at the six red socks.', ru:'Посмотри на шесть красных носков.', em:'🧦' },
+  { en:'The frog can jump on the stone.', ru:'Лягушка может прыгнуть на камень.', em:'🪨' },
+  { en:'I like to sleep in my bed.', ru:'Я люблю спать в своей кровати.', em:'🛌', cf:'bed' },
+  { en:'The fox got the egg.',       ru:'Лиса утащила яйцо.',           em:'🥚' },
+  { en:'Dad can fix the car.',       ru:'Папа умеет чинить машину.',    em:'🔧' },
+  { en:'We can count to nine.',      ru:'Мы умеем считать до девяти.',  em:'9️⃣' },
+  { en:'The cake is on the desk.',   ru:'Торт на столе.',               em:'🪑' },
+];
+
+/* ------------------------------------------------------------
+   ТЕКСТЫ
+   Следующая ступень после фразы: связный текст из четырёх
+   предложений. Каждое слово читается по правилам или входит
+   в список невидимок. В конце — вопрос на понимание: прочитать
+   и понять — не одно и то же, и проверять надо второе.
+   ------------------------------------------------------------ */
+const TEXTS = [
+  { t:'The Cat and the Dog', ru:'Кот и пёс', em:'🐱',
+    lines:['My cat is on the bed.', 'My dog is on the mat.',
+           'The cat can see the dog.', 'The dog can see the cat!'],
+    ask:'Кто на кровати?', ok:'🐱', opts:['🐕','🐱','🐟'] },
+
+  { t:'The Shop', ru:'Магазин', em:'🏪',
+    lines:['Mum and I go to the shop.', 'We get milk and jam.',
+           'I can see a big cake!', 'Mum said: no cake.'],
+    ask:'Что мама не разрешила купить?', ok:'🎂', opts:['🥛','🎂','🍓'] },
+
+  { t:'The Duck', ru:'Утка', em:'🦆',
+    lines:['A duck is in the pool.', 'The sun is hot.',
+           'The duck can swim and swim.', 'It is fun!'],
+    ask:'Где утка?', ok:'🏊', opts:['🛏️','🌳','🏊'] },
+
+  { t:'The Storm', ru:'Гроза', em:'🌩️',
+    lines:['It was dark.', 'The wind was fast.',
+           'Rain fell on the road.', 'I ran to my mum.'],
+    ask:'К кому побежал мальчик?', ok:'👩', opts:['👩','🧔','🐕'] },
+
+  { t:'My Bike', ru:'Мой велосипед', em:'🚲',
+    lines:['My bike is blue.', 'I ride it to the park.',
+           'My sister has a red bike.', 'We ride and ride.'],
+    ask:'Какого цвета велосипед у сестры?', ok:'🔴', opts:['🔵','💚','🔴'] },
+
+  { t:'The Ring', ru:'Кольцо', em:'👑',
+    lines:['The king has a ring.', 'The ring is round.',
+           'A fox got the ring!', 'The king is mad.'],
+    ask:'Кто утащил кольцо?', ok:'🦊', opts:['🦊','🐕','🐐'] },
+
+  { t:'Lunch', ru:'Обед', em:'🍱',
+    lines:['Lunch is in the box.', 'I get fish and chips.',
+           'Dad gets a bun.', 'It is fresh!'],
+    ask:'Что взял папа?', ok:'🥯', opts:['🐟','🥯','🍟'] },
+
+  { t:'Time to Sleep', ru:'Пора спать', em:'🌙',
+    lines:['The sun is not up.', 'I can see the moon and the stars.',
+           'It is dark in my room.', 'It is time to sleep.'],
+    ask:'Что видно на небе?', ok:'🌙', opts:['☀️','🌧️','🌙'] },
+];
+
+/* ------------------------------------------------------------
+   СОРЕВНОВАНИЕ
+   Ранг — накопительный, растёт от общего числа звёзд и не падает.
+   Медаль — за один забег, её можно побить в следующем.
+   ------------------------------------------------------------ */
+const RANKS = [
+  { min:0,   name:'Дерево',  em:'🪵' },
+  { min:20,  name:'Камень',  em:'🪨' },
+  { min:50,  name:'Железо',  em:'⚙️' },
+  { min:90,  name:'Золото',  em:'🥇' },
+  { min:140, name:'Алмаз',   em:'💎' },
+  { min:200, name:'Незерит', em:'⬛' },
+];
+/* Медаль — за точность на уровне, а не за скорость. Скорость важна для
+   соревнования, но правильность важнее для чтения. Пороги в долях, потому что
+   уровень фраз может оказаться короче десяти, если фраз открыто мало. */
+const MEDALS = [
+  { min:0.6, em:'🥉', name:'бронза' },
+  { min:0.8, em:'🥈', name:'серебро' },
+  { min:0.9, em:'🥇', name:'золото' },
+  { min:1.0, em:'💎', name:'алмаз' },
+];
+const LEVEL_SIZE = 10;    /* вопросов в одном уровне */
+const PASS_RATE  = 0.8;   /* какую долю нужно взять, чтобы открыть следующий */
+
+const passScore = size => Math.max(1, Math.round(size * PASS_RATE));
+
+const rankOf = s => RANKS.filter(r => s >= r.min).pop();
+const nextRank = s => RANKS.find(r => s < r.min) || null;
+const medalOf = (correct, size) =>
+  MEDALS.filter(m => correct / size >= m.min - 1e-9).pop() || null;
+
+/* Как произносится каждый звук. Диграфы — две буквы, один звук. */
+const SAY = {
+  s:'sss', a:'aah', t:'tuh', i:'ih',  p:'puh', n:'nnn',
+  c:'kuh', k:'kuh', e:'eh',  h:'huh', r:'rrr', m:'mmm', d:'duh',
+  g:'guh', o:'aw',  u:'uh',  l:'lll', f:'fff', b:'buh',
+  j:'juh', z:'zzz', w:'wuh', v:'vvv', y:'yuh', x:'ks',
+  ai:'ay', oa:'oh', ie:'eye', ee:'ee', or:'or', oo:'oo', ng:'ng',
+  ch:'chuh', sh:'shh', th:'thuh',
+  qu:'kwuh', ou:'ow', oi:'oy', ue:'you', er:'er', ar:'ar',
+  a_e:'ay', i_e:'eye', o_e:'oh', u_e:'you', e_e:'ee',
+  oo2:'uh',                                  /* короткое oo: book, look, good */
+  ck:'kuh', ss:'sss', ll:'lll', ff:'fff', gg:'guh'
+};
+
+/* Разбивка слова на ЗВУКИ, а не на буквы: две буквы могут давать один звук.
+   Порядок в списке не важен — проверяется пара символов слева направо. */
+const DIGRAPHS = ['ck','ss','ll','ff','gg','ai','oa','ie','ee','or','oo','ng',
+                  'ch','sh','th','qu','ou','oi','ue','er','ar'];
+
+const VOWELS = 'aeiou';
+
+/* Немая e на конце: гласная + согласная + e (cape, kite, note).
+   Возвращает индекс гласной или -1. Такая пара — это ОДИН звук, разорванный
+   согласной, поэтому «cape» должно звучать c-a_e-p, а никак не c-a-p-e. */
+function magicIndex(w){
+  if(w.length < 4 || !w.endsWith('e')) return -1;
+  const v = w[w.length-3], c = w[w.length-2];
+  if(!VOWELS.includes(v)) return -1;      /* tree, blue, three — не тот случай */
+  if(VOWELS.includes(c)) return -1;       /* между ними должна быть согласная */
+  return w.length-3;
+}
+
+function split(w){
+  const m = magicIndex(w);
+  const end = m >= 0 ? m : w.length;
+  const out = [];
+  for(let i=0;i<end;i++){
+    const pair = w.slice(i,i+2);
+    if(i+1 < end && DIGRAPHS.includes(pair)){ out.push(pair); i++; }
+    else out.push(w[i]);
+  }
+  if(m >= 0){ out.push(w[m] + '_e'); out.push(w[m+1]); }
+  return out;
+}
+
+/* Звуки слова: обычно считаются из написания, но слово может задать их само —
+   это нужно там, где одно написание даёт разные звуки (moon и book). */
+const soundsOf = W => W.s || split(W.w);
+
+/* Как показать звук человеку: a_e читается как «a–e», oo2 — это те же oo */
+const label = u => u.replace('_','–').replace(/\d+$/,'');
+
+/* Сюда вписываем пути к mp3, когда запишем живой голос:
+   AUDIO['ph:s'] = 'audio/phonemes/s.mp3'  —  плеер предпочтёт файл синтезатору. */
+const AUDIO = {};
+
+/* ============================================================
+   2. ЗВУК
+   Приоритет: записанный mp3 → синтез речи браузера.
+   На Android голоса подгружаются асинхронно — ждём voiceschanged.
+   ============================================================ */
+
+const Sound = {
+  voice:null, ready:false, ctx:null,
+
+  init(){
+    if(!('speechSynthesis' in window)) return;
+    const pick = () => {
+      const vs = speechSynthesis.getVoices();
+      if(!vs.length) return;
+      this.voice =
+        vs.find(v=>v.lang==='en-GB' && /female|google|natural/i.test(v.name)) ||
+        vs.find(v=>v.lang==='en-US' && /female|google|natural/i.test(v.name)) ||
+        vs.find(v=>v.lang==='en-GB') ||
+        vs.find(v=>v.lang==='en-US') ||
+        vs.find(v=>(v.lang||'').toLowerCase().startsWith('en')) || null;
+      const was = this.ready;
+      this.ready = !!this.voice;
+      if(this.ready !== was) render();
+    };
+    pick();
+    speechSynthesis.addEventListener('voiceschanged', pick);
+  },
+
+  say(text, rate=0.8){
+    if(!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if(this.voice){ u.voice = this.voice; u.lang = this.voice.lang; }
+    else u.lang = 'en-US';
+    u.rate = rate; u.pitch = 1.05;
+    speechSynthesis.speak(u);
+  },
+
+  file(key){
+    const src = AUDIO[key];
+    if(!src) return false;
+    const a = new Audio(src); a.play().catch(()=>{});
+    return true;
+  },
+
+  phoneme(ch){                                   /* звук буквы: /s/, а не «эс» */
+    if(this.file('ph:'+ch)) return;
+    this.say(SAY[ch] || ch, 0.6);
+  },
+
+  word(w){
+    if(this.file('word:'+w)) return;
+    this.say(w, 0.75);
+  },
+
+  sentence(t){                                   /* фразу читаем ещё медленнее */
+    if(this.file('sent:'+t)) return;
+    this.say(t, 0.68);
+  },
+
+  blend(word, seq, onStep){                      /* слияние: s — i — t — sit */
+    let i = 0;
+    const step = () => {
+      if(i < seq.length){
+        onStep && onStep(i);
+        this.phoneme(seq[i]);
+        i++;
+        setTimeout(step, 750);
+      } else {
+        onStep && onStep(-1);
+        setTimeout(()=>this.word(word), 250);
+      }
+    };
+    step();
+  },
+
+  blip(good){                                    /* награда и ошибка без файлов */
+    try{
+      this.ctx = this.ctx || new (window.AudioContext||window.webkitAudioContext)();
+      const t = this.ctx.currentTime;
+      const notes = good ? [523,659,784] : [220,165];
+      notes.forEach((f,i)=>{
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type='square'; o.frequency.value=f;
+        g.gain.setValueAtTime(0.0001,t+i*0.09);
+        g.gain.exponentialRampToValueAtTime(0.18,t+i*0.09+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.09+0.14);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t+i*0.09); o.stop(t+i*0.09+0.16);
+      });
+    }catch(e){}
+  }
+};
+
+/* ============================================================
+   3. ПРОГРЕСС — localStorage, без аккаунтов и без сети
+   ============================================================ */
+
+const KEY = 'zvuki-bloki.v1';
+const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } };
+let P = Object.assign({ heard:{}, stats:{}, stars:0, best:0, run:0, spelled:0,
+                        lvl:1, plvl:1, lvlTime:{}, races:0,
+                        aloud:0, streak:0, bestStreak:0, day:'' }, load());
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(P)); }catch(e){} };
+
+/* ------------------------------------------------------------
+   ПАМЯТЬ ОБ ОШИБКАХ
+   Без неё слово, на котором ребёнок споткнулся, может больше
+   никогда не выпасть, а знакомое будет выпадать снова и снова.
+   Три исхода: прочитал сам / с подсказкой / не смог.
+   ------------------------------------------------------------ */
+function mark(key, res){
+  const s = P.stats[key] || (P.stats[key] = { ok:0, hint:0, no:0 });
+  s[res] = (s[res] || 0) + 1;
+  save();
+}
+
+const statOf   = k => P.stats[k] || { ok:0, hint:0, no:0 };
+/* чем больше число, тем нужнее повторить */
+const weakness = k => { const s = statOf(k); return s.no*3 + s.hint - s.ok; };
+
+const weakWords = pool =>
+  pool.filter(W => weakness('w:' + W.w) > 0)
+      .sort((a,b) => weakness('w:' + b.w) - weakness('w:' + a.w));
+
+/* букву считаем освоенной, когда её узнают на слух устойчиво */
+const masteredL = l => { const s = statOf('L:' + l); return s.ok >= 3 && s.ok > s.no * 2; };
+
+/* ------------------------------------------------------------
+   СЕРИЯ ДНЕЙ — соревнование с самим собой, которое не кончается
+   ------------------------------------------------------------ */
+function touchDay(){
+  const d = new Date(), today = d.toISOString().slice(0,10);
+  if(P.day === today) return;
+  const y = new Date(d.getTime() - 864e5).toISOString().slice(0,10);
+  P.streak = (P.day === y) ? (P.streak || 0) + 1 : 1;
+  P.bestStreak = Math.max(P.bestStreak || 0, P.streak);
+  P.day = today;
+  save();
+}
+
+function earn(id){
+  if(P.heard[id]) return false;
+  P.heard[id] = true; P.stars++; save(); Sound.blip(true);
+  return true;
+}
+
+/* Группа открывается, когда в предыдущей собраны все звёзды букв. */
+const groupStars = g => g.letters.filter(L => P.heard['L'+L.l]).length;
+const isOpen = g => g.id === 1 || groupStars(GROUPS[g.id-2]) === GROUPS[g.id-2].letters.length;
+const openGroups = () => GROUPS.filter(isOpen);
+const openLetters = () => openGroups().flatMap(g => g.letters);
+const openWords = () => openGroups().flatMap(g => g.words);
+
+const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(p=>p[1]);
+
+/* ============================================================
+   4. ЭКРАНЫ
+   ============================================================ */
+
+let view = { name:'home', g:0, i:0 };
+const app = document.getElementById('app');
+
+let race = null;
+
+/* уход с экрана всегда гасит таймер забега — иначе он тикает в фоне */
+function stopClock(){
+  if(race && race.timer){ clearInterval(race.timer); race.timer = null; }
+}
+const go = (name, g=0, i=0) => { if(name !== 'race') stopClock(); view = {name,g,i}; render(); };
+
+function header(title, back=true){
+  return `<div class="bar">
+    ${back && view.name!=='home' ? `<button class="blk back" data-go="home" aria-label="Назад">◀</button>` : ''}
+    <div class="title">${title}</div>
+    ${view.name === 'home'
+      ? `<button class="pbtn" data-go="parent" aria-label="Для родителей">👪</button>` : ''}
+    <div class="score" aria-label="Звёзд: ${P.stars}">⭐ ${P.stars}</div>
+  </div>`;
+}
+
+function voiceWarning(){
+  if(Sound.ready || !('speechSynthesis' in window)) return '';
+  return `<div class="warn">Английский голос не найден. Открой Настройки → Специальные
+    возможности → Синтез речи и добавь English. Пока звука не будет.</div>`;
+}
+
+const readyPhrases = () => {
+  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
+  return PHRASES.filter(p => phraseReady(p, open)).length;
+};
+
+function screenHome(){
+  const secs = GROUPS.map((g,gi) => {
+    const open = isOpen(g);
+    const tiles = g.letters.map((L,i)=>`
+      <button class="tile ${P.heard['L'+L.l]?'done':''}" data-letter="${gi}:${i}"
+              ${open?'':'disabled'} aria-label="Звук ${label(L.l)}, слово ${L.word}">
+        ${masteredL(L.l) ? '<span class="mark">✅</span>'
+                         : (P.heard['L'+L.l] ? '<span class="mark">⭐</span>' : '')}
+        <span class="ltr">${label(L.l)}</span><span class="em">${L.em}</span>
+      </button>`).join('');
+    const prev = GROUPS[gi-1];
+    return `<div class="gsec ${open?'':'locked'}">
+      <div class="ghead">
+        <span class="gname">${g.name}</span>
+        <span class="gletters">${g.letters.map(L=>L.l).join('')}</span>
+        <span class="gstate">${open ? groupStars(g)+'/'+g.letters.length : '🔒'}</span>
+      </div>
+      ${open ? '' : `<div class="lockmsg">Откроется, когда соберёшь все звёзды в группе
+        ${prev.id} — осталось ${prev.letters.length - groupStars(prev)}.</div>`}
+      <div class="grid">${tiles}</div>
+    </div>`;
+  }).join('');
+
+  const r = rankOf(P.stars), nx = nextRank(P.stars);
+  const from = r.min, to = nx ? nx.min : r.min + 1;
+  const pct = nx ? Math.round((P.stars - from) / (to - from) * 100) : 100;
+
+  return header('ЗВУКИ И БЛОКИ', false) + voiceWarning() + `
+    <div class="rank">
+      <span class="em">${r.em}</span>
+      <span class="txt">
+        <span class="name">Ранг: ${r.name}
+          ${P.streak ? `<span class="streakb">🔥 ${P.streak} ${pluralForm(P.streak,'день','дня','дней')} подряд</span>` : ''}</span>
+        <span class="barwrap"><span class="bar" style="width:${pct}%"></span></span>
+        <span class="next">${nx ? `до ранга «${nx.name}» ещё ${nx.min - P.stars} ⭐`
+                                : 'выше ранга нет — ты прошёл всё'}</span>
+      </span>
+    </div>
+    <div class="scroll">
+      <p class="sub">Сначала звук буквы, потом слияние звуков в слово. Открыто слов:
+        <b>${openWords().length}</b> — и каждое ты уже можешь прочитать сам.</p>
+      ${secs}
+    </div>
+    <div class="modes">
+      <button class="blk grass" data-go="phrases"><span>📖 Фразы</span><small>${readyPhrases()} из ${PHRASES.length}</small></button>
+      <button class="blk grass" data-race="${P.lvl||1}"><span>🏁 Забег</span><small>уровень ${P.lvl||1}</small></button>
+      <button class="blk gold" data-duel="1"><span>⚔️ Дуэль</span><small>вдвоём</small></button>
+      <button class="blk water" data-go="words">🔤 Собери слово</button>
+      <button class="blk water" data-go="spell">🧱 Выложи слово</button>
+      <button class="blk water" data-go="game">🎮 Поймай звук</button>
+      <button class="blk grass" data-go="texts"><span>📚 Тексты</span><small>${readyTexts().length} из ${TEXTS.length}</small></button>
+      <button class="blk lava wide" data-aloud="1"><span>🗣 Читай вслух</span><small>вместе со взрослым</small></button>
+      <button class="blk gold" data-go="tricky">👻 Невидимки</button>
+      <button class="blk gold" data-go="magic" ${isOpen(GROUPS[7])?'':'disabled'}>✨ Немая e</button>
+    </div>`;
+}
+
+function screenLetter(){
+  const g = GROUPS[view.g], L = g.letters[view.i];
+  return header(`${g.name} · ${view.i+1} из ${g.letters.length}`) + `
+    <div class="card">
+      <div class="hero">${L.l.length===1 ? L.l + ' ' + L.l.toUpperCase() : label(L.l)}</div>
+      <div class="pho">${L.ipa}</div>
+      <div class="em">${L.em}</div>
+      <div class="word">${L.word}</div>
+      <div class="ru">${L.ru}</div>
+    </div>
+    <div class="fact">${L.fact}</div>
+    <div class="nav">
+      <button class="blk gold" data-phoneme="${L.l}">🔊 Звук</button>
+      <button class="blk water" data-word="${L.word}" data-earn="L${L.l}">🔊 Слово</button>
+    </div>
+    <div class="nav">
+      <button class="blk ghost" data-step="-1">◀ Назад</button>
+      <button class="blk ghost" data-step="1">Дальше ▶</button>
+    </div>`;
+}
+
+function screenWords(){
+  let n = 0;
+  const secs = openGroups().map(g => {
+    const rows = g.words.map(W => {
+      const id = n++;
+      const seq = soundsOf(W);
+      const chips = seq.map(ch =>
+        `<button class="chip" data-sound="${ch}">${label(ch)}</button>`).join('');
+      return `<div class="wrow" data-blend="${W.w}" data-seq="${seq.join(' ')}"
+                   data-id="${id}" role="button" tabindex="0"
+                   aria-label="Слово ${W.w}">
+        <span class="em">${W.em}</span>
+        <span class="txt"><span class="w">${W.w}</span><span class="t">${W.ru} · ${W.hint}</span></span>
+        <span class="chips" id="chips${id}">${chips}</span>
+      </div>`;
+    }).join('');
+    return `<div class="secname">${g.name} · ${g.words.length} слов</div>${rows}`;
+  }).join('');
+
+  return header('Собери слово') + `
+    <p class="sub">Нажми на слово — звуки прозвучат по очереди, а потом сольются.
+      Нажми на маленькую букву — услышишь только её звук.</p>
+    <div class="scroll">${secs}</div>`;
+}
+
+/* --- «поймай звук»: слышишь звук, выбираешь букву --- */
+let game = null;
+function newRound(){
+  const pool = openLetters();
+  const right = pool[Math.floor(Math.random()*pool.length)];
+  const rest = shuffle(pool.filter(L => SAY[L.l] !== SAY[right.l])).slice(0,2);
+  game = { right, opts:shuffle([right,...rest]), locked:false };
+}
+
+function screenGame(){
+  if(!game) newRound();
+  const opts = game.opts.map(L=>
+    `<button class="opt" data-opt="${L.l}">${label(L.l)}</button>`).join('');
+  return header('Поймай звук') + `
+    <div class="game">
+      <div class="streak">Подряд: ${P.run||0} · Рекорд: ${P.best||0}</div>
+      <button class="blk gold" data-again="1" style="width:100%">🔊 Слушать звук</button>
+      <div class="ask">Какая буква так звучит?</div>
+      <div class="opts">${opts}</div>
+    </div>`;
+}
+
+/* --- «выложи слово»: слышишь слово, собираешь его из букв --- */
+let spell = null;
+function newSpell(){
+  const pool = openWords();
+  const W = pool[Math.floor(Math.random()*pool.length)];
+  const need = [...W.w];
+  /* слово выкладывается по буквам, поэтому лишние плитки тоже только одиночные:
+     диграф вроде «ai» в этот ряд не встанет */
+  const extras = shuffle(openLetters().map(L=>L.l)
+                   .filter(l => l.length === 1 && !need.includes(l))).slice(0,3);
+  spell = { W, need, bank:shuffle([...need,...extras]).map(ch=>({ch,used:false})),
+            placed:[], state:'' };
+}
+
+function screenSpell(){
+  if(!spell) newSpell();
+  const S = spell;
+  const slots = S.need.map((_,i)=>
+    `<div class="slot ${S.placed[i]?'full':''}">${S.placed[i]||''}</div>`).join('');
+  const bank = S.bank.map((b,i)=>
+    `<button class="bk ${b.used?'used':''}" data-bank="${i}">${b.ch}</button>`).join('');
+  return header('Выложи слово') + `
+    <div class="spell">
+      <div class="pic">${S.W.em}</div>
+      <button class="blk gold" data-word="${S.W.w}" style="width:100%">🔊 Слушать слово</button>
+      <div class="slots ${S.state}">${slots}</div>
+      <div class="bank">${bank}</div>
+      <button class="blk ghost" data-erase="1" style="width:100%">⌫ Стереть букву</button>
+    </div>`;
+}
+
+/* --- слова-невидимки: их не разбирают на звуки, их узнают целиком ---
+   Набор открывается вместе с группой букв — так их и даёт Jolly Phonics.
+   Полсотни слов разом ребёнок не возьмёт, шесть за раз возьмёт. */
+function screenTricky(){
+  const openN = openGroups().length;
+  const list  = TRICKY.filter(T => T.g <= openN);
+  const left  = TRICKY.length - list.length;
+  const rows = list.map(T=>`
+    <button class="trow" data-tricky="${T.w}" aria-label="Слово ${T.w}, ${T.ru}">
+      <span class="w">${T.w}</span>
+      <span class="txt"><span class="ru">${T.ru}</span><span class="ex">${T.ex}</span></span>
+    </button>`).join('');
+  return header('Слова-невидимки') + `
+    <div class="note">Эти слова читаются не по правилам — разбирать их по звукам
+      бесполезно. Их узнают целиком, как знак на дороге. Зато без них не собрать
+      ни одной фразы.${left ? ` Открыто ${list.length} из ${TRICKY.length}:
+      ещё ${left} придут вместе со следующими группами букв.` : ''}</div>
+    <div class="scroll">${rows}</div>`;
+}
+
+/* --- забег: читаешь слово и выбираешь картинку, 60 секунд --- */
+
+/* ------------------------------------------------------------
+   ЧЕСТНОСТЬ ВОПРОСА В ЗАБЕГЕ
+
+   Картинкой можно проверить только то, что рисуется однозначно.
+   Два условия, без которых у вопроса появляется второй верный ответ:
+   1) абстрактные слова не показываем картинкой вообще;
+   2) близкие по смыслу слова не встречаются в одном вопросе —
+      если спросили hat, то cap не может стоять рядом.
+   В остальных режимах эти слова участвуют как обычно.
+   ------------------------------------------------------------ */
+const NO_PIC = new Set([
+  'sat','spin','snap','pet','kit','pick','neck','big','help','room','soon','long',
+  'vet','win','wet','yes','fresh','this','that','with','mix','dark','sharp','sound',
+  'round','count','quick','quiz','name','good',
+  /* служебные и частотные слова: картинки у «и», «но», «взял» не бывает */
+  'it','in','at','an','and','am','did','him','ran','mat',
+  'on','up','not','but','get','got','fun','fell','for',
+  'swim','went','will','well','catch','then','them',
+  'her','under','out','start','like','make','take','made','fast'
+]);
+
+const CONFUSE = {
+  pan:'cook',   pot:'cook',    cook:'cook',
+  can:'vessel',  cup:'vessel',  glass:'vessel', milk:'vessel',
+  nap:'sleep',  bed:'sleep',   sleep:'sleep',
+  dad:'people', man:'people',  men:'people',  kid:'people',   mum:'people', sister:'people',
+  hat:'head',   cap:'head',
+  red:'color',  green:'color', blue:'color',
+  ten:'number', three:'number',six:'number',  five:'number',  nine:'number',
+  sad:'mood',   mad:'mood',    smile:'mood',  cute:'mood',
+  hand:'limb',  leg:'limb',    arm:'limb',
+  sun:'sky',    moon:'sky',    star:'sky',
+  bus:'vehicle',train:'vehicle',boat:'vehicle',jet:'vehicle', van:'vehicle',
+  ship:'vehicle',car:'vehicle', plane:'vehicle',bike:'vehicle',
+  run:'move',   jump:'move',   ride:'move',
+  hot:'temp',   cool:'temp',
+  clock:'time', late:'time',   time:'time',
+  rain:'weather',storm:'weather',wind:'weather',cloud:'weather',winter:'weather',
+  tree:'plant', rose:'plant',
+  see:'look',   look:'look',
+  feet:'foot',  foot:'foot',
+  pie:'food',   jam:'food',    food:'food',   chips:'food',   lunch:'food', cake:'food',
+  song:'music', note:'music',
+  sing:'music',
+  log:'plant',  garden:'plant',
+  nose:'face',  mouth:'face',  teeth:'face',
+  jeans:'legs', shorts:'legs',
+  bun:'food',
+};
+
+const picPool = () => openWords().filter(W => !NO_PIC.has(W.w));
+
+/* Смысловая группа: у слова она в таблице, у фразы записана прямо в ней. */
+const cfOf = X => X.cf || CONFUSE[X.w];
+
+/* один вопрос: заданное слово или фраза и три картинки, верная ровно одна */
+function makeQuestionFor(W, pool){
+  const cf = cfOf(W);
+  const safe = pool.filter(x => x.w !== W.w && x.em !== W.em &&
+                                !(cf && cfOf(x) === cf));
+  let rest = shuffle(safe).slice(0,2);
+  if(rest.length < 2){                       /* подстраховка на самом старте */
+    const more = shuffle(pool.filter(x => x.w !== W.w && !rest.includes(x)));
+    rest = rest.concat(more).slice(0,2);
+  }
+  return { W, picks: shuffle([W, ...rest]) };
+}
+
+const makeQuestion = pool =>
+  makeQuestionFor(pool[Math.floor(Math.random()*pool.length)], pool);
+
+const makeQueue = n => { const pool = picPool();
+                         return Array.from({length:n}, ()=>makeQuestion(pool)); };
+
+/* Сложность слова: сколько в нём звуков и насколько поздняя группа. */
+function hardness(W){
+  return soundsOf(W).length * 10 + GROUPS.findIndex(g => g.words.includes(W));
+}
+
+/* Очереди для дуэли.
+   Игроки сидят рядом, поэтому одинаковые слова бессмысленны: второй просто
+   повторит за первым, ничего не прочитав. Но и раздать слова наугад нельзя —
+   кому-то достанутся короткие. Поэтому слова сортируются по сложности и
+   расходятся ПАРАМИ: из каждой пары одно слово одному игроку, другое другому.
+   Ни одного общего слова, а суммарная сложность у обоих одинаковая. */
+function makeDuelQueues(n){
+  const pool = picPool();
+  const per = Math.min(n, Math.floor(pool.length / 2));
+  if(per < 2) return [makeQueue(n), makeQueue(n)];      /* слов слишком мало */
+
+  const picked = shuffle(pool).slice(0, per*2)
+                   .sort((x,y) => hardness(x) - hardness(y));
+  const a = [], b = [];
+  for(let i = 0; i < picked.length; i += 2){
+    const flip = Math.random() < 0.5;                   /* кому какое из пары */
+    a.push(picked[i + (flip ? 1 : 0)]);
+    b.push(picked[i + (flip ? 0 : 1)]);
+  }
+  return [ shuffle(a).map(W => makeQuestionFor(W, pool)),
+           shuffle(b).map(W => makeQuestionFor(W, pool)) ];
+}
+
+function nextQ(){
+  race.q = race.queue ? race.queue[race.qi++ % race.queue.length]
+                      : makeQuestion(picPool());
+  race.locked = false;
+}
+
+/* Секундомер идёт ВВЕРХ и ничего не обрывает: уровень заканчивается словами,
+   а не временем. Обратный отсчёт заставлял бы угадывать вместо чтения. */
+function startClock(){
+  race.timer = setInterval(()=>{
+    if(!race) return;
+    const el = document.getElementById('clock');
+    if(el) el.textContent = secs(elapsed());
+  }, 1000);
+}
+
+/* во фразах есть пробелы и точки — в атрибут они попадают как есть,
+   но кавычки и амперсанд экранируем на случай будущих фраз */
+const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+
+const elapsed = () => Math.round((Date.now() - race.t0) / 1000);
+const secs = s => Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+
+/* Слова уровня: чем выше уровень, тем позже группы, из которых берутся слова. */
+function levelPool(n){
+  const sorted = picPool().slice().sort((x,y) => hardness(x) - hardness(y));
+  if(sorted.length <= LEVEL_SIZE * 2) return sorted;
+  const span  = Math.max(LEVEL_SIZE * 3, Math.round(sorted.length * 0.45));
+  const room  = sorted.length - span;
+  const start = Math.round(Math.min(1, (n - 1) / 8) * room);
+  return sorted.slice(start, start + span);
+}
+
+/* Фразы как вопросы забега: тот же механизм, только читать нужно предложение. */
+function phraseItems(){
+  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
+  return PHRASES.filter(p => phraseReady(p, open))
+                .map(p => ({ w:p.en, em:p.em, ru:p.ru, cf:p.cf, phrase:true }));
+}
+
+/* Треть уровня — слова, на которых он уже спотыкался. Остальное новое:
+   если гонять только ошибки, уровень превращается в наказание.
+
+   weakPool отдельно от pool не случайно: трудное слово надо доставать
+   ОТКУДА УГОДНО, а не только из окна сложности текущего уровня —
+   иначе ошибка, сделанная на слове из другого уровня, не вернётся никогда. */
+function pickWithWeak(n, pool, weakPool){
+  const weak   = weakWords(weakPool || pool);
+  const chosen = shuffle(weak).slice(0, Math.min(Math.floor(n/3), weak.length));
+  const rest   = shuffle(pool.filter(W => !chosen.includes(W)))
+                   .slice(0, n - chosen.length);
+  return shuffle(chosen.concat(rest));
+}
+
+function makeLevel(n, mode){
+  if(mode === 'p'){
+    const pool = phraseItems();
+    return shuffle(pool).slice(0, Math.min(LEVEL_SIZE, pool.length))
+                        .map(X => makeQuestionFor(X, pool));
+  }
+  const pool = levelPool(n), all = picPool();
+  return pickWithWeak(Math.min(LEVEL_SIZE, pool.length), pool, all)
+           .map(W => makeQuestionFor(W, all));
+}
+
+function startRace(level, mode){
+  stopClock();
+  const n = level || 1, m = mode || 'w';
+  const queue = makeLevel(n, m);
+  race = { queue, size:queue.length, qi:0, done:0, correct:0, marks:[],
+           t0:Date.now(), q:null, locked:false, timer:null,
+           player:null, level:n, mode:m };
+  nextQ();
+  view = { name:'race', g:0, i:0 };
+  render();
+  startClock();
+}
+
+function endRace(){
+  stopClock();
+  race.time = elapsed();
+
+  if(race.player !== null){                    /* ход дуэли */
+    duel.results[race.player] = { correct:race.correct, time:race.time, done:race.done };
+    view = { name: race.player === 0 ? 'duelPass' : 'duelEnd', g:0, i:0 };
+    render();
+    Sound.blip(true);
+    return;
+  }
+
+  const key  = race.mode + race.level;
+  const pass = passScore(race.size);
+  race.passed = race.correct >= pass;
+  race.prevTime = (P.lvlTime || {})[key] || 0;
+  /* время засчитывается только за ПРОЙДЕННЫЙ уровень: иначе рекорд ставится
+     быстрым тыканьем наугад, и вместо чтения поощряется скорость */
+  race.record = race.done === race.size && race.passed &&
+                (!race.prevTime || race.time < race.prevTime);
+  if(race.record){ P.lvlTime = P.lvlTime || {}; P.lvlTime[key] = race.time; }
+  if(race.passed){
+    if(race.mode === 'p') P.plvl = Math.max(P.plvl || 1, race.level + 1);
+    else                  P.lvl  = Math.max(P.lvl  || 1, race.level + 1);
+  }
+  P.races = (P.races||0) + 1;
+  P.stars += race.correct;                     /* очки уровня идут в общий ранг */
+  save();
+  view = { name:'raceEnd', g:0, i:0 };
+  render();
+  Sound.blip(race.passed);
+}
+
+/* --- дуэль на одном телефоне --- */
+const AVATARS = ['🧒','👦','👧','🧔','👩','👴','👵','🐱','🐶','🦊'];
+let duel = null;
+
+function startDuel(){
+  duel = { av:[P.avA || '🧒', P.avB || '🧔'],
+           results:[null,null], queues:makeDuelQueues(LEVEL_SIZE) };
+  go('duelIntro');
+}
+
+function duelTurn(pi){
+  stopClock();
+  const queue = duel.queues[pi];
+  race = { queue, size:queue.length, qi:0, done:0, correct:0, marks:[],
+           t0:Date.now(), q:null, locked:false, timer:null,
+           player:pi, level:0, mode:'w' };
+  nextQ();
+  view = { name:'race', g:0, i:0 };
+  render();
+  startClock();
+}
+
+/* Полоска клеток: видно, сколько пройдено и где ошибся. */
+function dots(){
+  return Array.from({length:race.size}, (_,i) =>
+    `<span class="dot ${race.marks[i] || ''}"></span>`).join('');
+}
+
+function screenRace(){
+  const picks = race.q.picks.map(W=>
+    `<button class="pk" data-pick="${escAttr(W.w)}" aria-label="${W.ru}">${W.em}</button>`).join('');
+  const badge = race.player !== null
+    ? `ход ${duel.av[race.player]}`
+    : (race.mode === 'p' ? `фразы · ур. ${race.level}` : `уровень ${race.level}`);
+  return `<div class="hud">
+      <span class="clock" id="clock">${secs(elapsed())}</span>
+      <span class="rec">${badge}</span>
+      <span class="sc">${race.correct}/${race.size}</span>
+    </div>
+    <div class="dots">${dots()}</div>
+    <div class="race">
+      <div class="q ${race.mode === 'p' ? 'sentence' : ''}" id="q">${race.q.W.w}</div>
+      <div class="picks">${picks}</div>
+    </div>
+    ${race.player !== null
+      ? `<button class="blk dirt" data-endturn="1">✔ Закончил ход</button>`
+      : `<button class="blk ghost" data-endturn="1">Выйти</button>`}`;
+}
+
+function screenRaceEnd(){
+  const m = medalOf(race.correct, race.size);
+  const passed = race.passed;
+  const pass = passScore(race.size);
+  const rungs = MEDALS.map(x=>{
+    const need = Math.round(x.min * race.size);
+    return `<span class="rung ${race.correct>=need?'got':''}">
+      <span class="e">${x.em}</span>${need}/${race.size}
+    </span>`;
+  }).join('');
+  const best = (P.lvlTime || {})[race.mode + race.level];
+  const what = race.mode === 'p' ? 'Фразы · уровень' : 'Уровень';
+
+  return header(`${what} ${race.level}`) + `
+    <div class="result">
+      <div class="medal">${m ? m.em : '🏁'}</div>
+      <div class="big">${race.correct} из ${race.done}</div>
+      <div class="cap">${race.record
+        ? `Новое лучшее время: ${secs(race.time)}${race.prevTime ? ` — было ${secs(race.prevTime)}` : ''}.`
+        : `Время: ${secs(race.time)}${best ? `. Лучшее на этом уровне — ${secs(best)}` : ''}.`}</div>
+      <div class="rec">⭐ +${race.correct} к рангу</div>
+      <div class="ladder">${rungs}</div>
+      <div class="cap">${passed
+        ? `Уровень пройден — открыт уровень ${race.level + 1}.`
+        : `Чтобы открыть следующий уровень, нужно ${pass} из ${race.size}. Попробуй ещё раз.`}</div>
+    </div>
+    <div class="nav">
+      ${passed
+        ? `<button class="blk grass" data-race="${race.mode}:${race.level + 1}">▶ Уровень ${race.level + 1}</button>`
+        : `<button class="blk grass" data-race="${race.mode}:${race.level}">↻ Ещё раз</button>`}
+      <button class="blk ghost" data-go="${race.mode === 'p' ? 'phrases' : 'home'}">
+        ${race.mode === 'p' ? 'К фразам' : 'Домой'}</button>
+    </div>`;
+}
+
+/* --- фразы: открываются по мере того, как открываются звуки --- */
+const TRICKY_SET = new Set(TRICKY.map(t => t.w.toLowerCase()));
+const DOUBLES = ['ck','ss','ll','ff','gg'];          /* удвоенные буквы отдельно не учим */
+const bareWord = tok => tok.toLowerCase().replace(/[^a-z']/g,'');
+
+function phraseReady(ph, open){
+  return ph.en.split(/\s+/).every(tok => {
+    const w = bareWord(tok);
+    if(!w || TRICKY_SET.has(w)) return true;
+    return split(w).every(u => open.has(u) || DOUBLES.includes(u));
+  });
+}
+
+function screenPhrases(){
+  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
+  const ready = PHRASES.filter(p => phraseReady(p, open));
+  const locked = PHRASES.length - ready.length;
+
+  const rows = ready.map(p => {
+    const i = PHRASES.indexOf(p);
+    const words = wordsHtml(p.en);
+    return `<div class="frow">
+      <div class="fhead">
+        <span class="fem">${p.em}</span>
+        <span class="fru">${p.ru}</span>
+        <button class="blk gold fplay" data-phrase="${i}">🔊 Вся фраза</button>
+      </div>
+      <div class="fwords">${words}</div>
+    </div>`;
+  }).join('');
+
+  return header('Читай фразы') + `
+    <div class="note">Нажми на любое слово — услышишь его. Нажми «Вся фраза» —
+      услышишь целиком. <b>Жёлтые слова</b> — невидимки, их не разбирают по звукам.</div>
+    <div class="scroll">
+      ${rows || '<div class="flock">Пока ни одной фразы. Открой звуки в группах — фразы появятся сами.</div>'}
+      ${locked ? `<div class="flock">Ещё ${locked} ${pluralPhrase(locked)}
+        ${locked % 10 === 1 && locked % 100 !== 11 ? 'откроется' : 'откроются'},
+        когда пройдёшь новые звуки.</div>` : ''}
+    </div>
+    ${ready.length >= 6
+      ? `<button class="blk grass" data-race="p:${P.plvl||1}">
+           🏁 Забег по фразам — уровень ${P.plvl||1}</button>`
+      : `<div class="flock">Забег по фразам откроется, когда наберётся 6 фраз.
+           Сейчас ${ready.length}.</div>`}`;
+}
+
+/* ------------------------------------------------------------
+   ЧИТАЙ ВСЛУХ
+   Все остальные режимы опознавательные: ткни картинку, ткни букву.
+   Но фонетика проверяется тем, что ребёнок ПРОИЗНОСИТ слово, слив
+   звуки. Судит взрослый рядом — он надёжнее любого распознавания
+   детской речи с акцентом.
+   ------------------------------------------------------------ */
+const ALOUD_SIZE = 10;
+let aloud = null;
+
+function startAloud(){
+  const pool = openWords();
+  aloud = { queue: pickWithWeak(Math.min(ALOUD_SIZE, pool.length), pool),
+            i:0, ok:0, hint:0, no:0 };
+  go('aloud');
+}
+
+function screenAloud(){
+  const A = aloud, W = A.queue[A.i];
+  return header(`Читай вслух · ${A.i + 1} из ${A.queue.length}`) + `
+    <div class="aloud">
+      <div class="acap">Прочитай слово вслух. Взрослый скажет, получилось ли.</div>
+      <div class="aword">${W.w}</div>
+      <div class="aru" id="aru">&nbsp;</div>
+      <button class="blk ghost" data-areveal="1">👁 Показать перевод и звук</button>
+    </div>
+    <div class="agrade">
+      <button class="blk grass" data-agrade="ok">✅ Прочитал сам</button>
+      <button class="blk gold" data-agrade="hint">🤝 С подсказкой</button>
+      <button class="blk dirt" data-agrade="no">❌ Не смог</button>
+    </div>`;
+}
+
+function screenAloudEnd(){
+  const A = aloud, n = A.queue.length;
+  const share = Math.round(A.ok / n * 100);
+  return header('Прочитано') + `
+    <div class="result">
+      <div class="medal">${share >= 80 ? '🏆' : share >= 50 ? '👍' : '💪'}</div>
+      <div class="big">${A.ok} из ${n}</div>
+      <div class="cap">Сам — ${A.ok}, с подсказкой — ${A.hint}, не смог — ${A.no}.</div>
+      <div class="rec">⭐ +${A.ok} к рангу</div>
+      <div class="cap">${A.no + A.hint
+        ? 'Трудные слова запомнены — они вернутся в следующих уровнях.'
+        : 'Ни одной запинки. Можно брать слова посложнее.'}</div>
+    </div>
+    <div class="nav">
+      <button class="blk grass" data-aloud="1">↻ Ещё десять</button>
+      <button class="blk ghost" data-go="home">Домой</button>
+    </div>`;
+}
+
+/* --- тексты: связное чтение и вопрос на понимание --- */
+const textReady = (T, open) =>
+  T.lines.every(line => phraseReady({ en:line }, open));
+
+const readyTexts = () => {
+  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
+  return TEXTS.filter(T => textReady(T, open));
+};
+
+function wordsHtml(line){
+  return line.split(/\s+/).map(tok => {
+    const w = bareWord(tok);
+    return `<button class="pw ${TRICKY_SET.has(w)?'tricky':''}" data-say="${w}"
+                    aria-label="Слово ${w}">${tok}</button>`;
+  }).join(' ');
+}
+
+function screenTexts(){
+  const ready = readyTexts();
+  const locked = TEXTS.length - ready.length;
+  const rows = ready.map(T => {
+    const i = TEXTS.indexOf(T);
+    return `<button class="trow" data-text="${i}" aria-label="Текст ${T.ru}">
+      <span class="w">${T.em}</span>
+      <span class="txt"><span class="ru">${T.t}</span>
+        <span class="ex">${T.ru} · ${T.lines.length} предложения${P.heard['X'+i]?' · ⭐':''}</span></span>
+    </button>`;
+  }).join('');
+
+  return header('Тексты') + `
+    <div class="note">Целый текст из четырёх предложений. Прочитай — и ответь на вопрос:
+      прочитать и понять это не одно и то же.</div>
+    <div class="scroll">
+      ${rows || '<div class="flock">Тексты откроются, когда пройдёшь больше звуков.</div>'}
+      ${locked ? `<div class="flock">Ещё ${locked} ${pluralForm(locked,'текст','текста','текстов')}
+        ${locked===1?'откроется':'откроются'} позже.</div>` : ''}
+    </div>`;
+}
+
+function screenText(){
+  const i = view.i, T = TEXTS[i];
+  const lines = T.lines.map((line,j) => `
+    <div class="tline">
+      <button class="blk gold tplay" data-line="${i}:${j}" aria-label="Прочитать предложение">🔊</button>
+      <span class="fwords">${wordsHtml(line)}</span>
+    </div>`).join('');
+  const answered = P.heard['X'+i];
+  const opts = T.opts.map(e =>
+    `<button class="topt ${answered && e===T.ok ? 'ok':''}" data-tans="${i}:${e}">${e}</button>`).join('');
+
+  return header(T.t) + `
+    <div class="scroll">
+      <div class="thead"><span class="tem">${T.em}</span>
+        <span class="tru">${T.ru}</span></div>
+      ${lines}
+      <div class="tq">
+        <div class="qask">${T.ask}</div>
+        <div class="topts">${opts}</div>
+        ${answered ? '<div class="qok">Верно! ⭐</div>' : ''}
+      </div>
+    </div>
+    <button class="blk grass" data-whole="${i}">🔊 Прочитать весь текст</button>`;
+}
+
+/* ------------------------------------------------------------
+   ДЛЯ РОДИТЕЛЕЙ
+   Экран не для ребёнка: что даётся трудно, что освоено,
+   и как не потерять прогресс.
+   ------------------------------------------------------------ */
+function screenParent(){
+  const all  = GROUPS.flatMap(g => g.words);
+  const weak = weakWords(all).slice(0, 12);
+  const known = all.filter(W => { const s = statOf('w:' + W.w);
+                                  return s.ok >= 2 && weakness('w:' + W.w) <= 0; });
+  const seenLetters = GROUPS.flatMap(g => g.letters).filter(L => masteredL(L.l));
+
+  const rows = weak.length
+    ? weak.map(W => {
+        const s = statOf('w:' + W.w);
+        return `<button class="prow" data-word="${W.w}" aria-label="Слово ${W.w}">
+          <span class="pem">${W.em}</span>
+          <span class="ptxt"><span class="pw2">${W.w}</span>
+            <span class="psub">${W.ru} · ошибок ${s.no}, с подсказкой ${s.hint}, верно ${s.ok}</span></span>
+          <span class="pplay">🔊</span>
+        </button>`;
+      }).join('')
+    : `<div class="flock">Пока ошибок не набралось. Список появится, когда ребёнок
+        поиграет в «Забег», «Выложи слово» или «Читай вслух».</div>`;
+
+  return header('Для родителей') + `
+    <div class="scroll">
+      <div class="pstat">
+        <div><b>${P.stars || 0}</b><span>звёзд</span></div>
+        <div><b>${known.length}</b><span>слов освоено</span></div>
+        <div><b>${seenLetters.length}</b><span>звуков узнаёт</span></div>
+        <div><b>${P.aloud || 0}</b><span>прочитано вслух</span></div>
+        <div><b>${P.streak || 0}</b><span>дней подряд</span></div>
+        <div><b>${P.lvl || 1}</b><span>уровень забега</span></div>
+      </div>
+
+      <div class="secname">Что даётся трудно</div>
+      <div class="note">Эти слова приложение само подмешивает в каждый уровень.
+        Разберите их вместе — по звукам, а не целиком.</div>
+      ${rows}
+
+      <div class="secname">Прогресс хранится только в этом браузере</div>
+      <div class="note">Очистка данных Chrome или новый телефон сотрут его без следа.
+        Сохраните код — он восстановит всё.</div>
+      <textarea class="pcode" id="pcode" readonly rows="3"
+        onclick="this.select()">${exportCode()}</textarea>
+      <div class="nav">
+        <button class="blk ghost" data-copycode="1">📋 Скопировать код</button>
+      </div>
+      <div class="note">Восстановить из кода — вставьте его сюда:</div>
+      <textarea class="pcode" id="pin" rows="3" placeholder="вставьте код сюда"></textarea>
+      <div class="nav">
+        <button class="blk dirt" data-restore="1">↩ Восстановить прогресс</button>
+      </div>
+      <div id="pmsg" class="note" style="display:none"></div>
+    </div>`;
+}
+
+/* Код прогресса: весь P в base64. Копируется одной кнопкой. */
+function exportCode(){
+  try{ return btoa(unescape(encodeURIComponent(JSON.stringify(P)))); }
+  catch(e){ return ''; }
+}
+function importCode(code){
+  try{
+    const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if(!obj || typeof obj !== 'object' || !('stars' in obj)) return false;
+    P = Object.assign({ heard:{}, stats:{}, stars:0, best:0, run:0, spelled:0,
+                        lvl:1, plvl:1, lvlTime:{}, races:0,
+                        aloud:0, streak:0, bestStreak:0, day:'' }, obj);
+    save();
+    return true;
+  }catch(e){ return false; }
+}
+
+/* --- немая e: правило показывается парой слов, разница в одной букве --- */
+function screenMagic(){
+  const rows = MAGIC_PAIRS.map(p=>{
+    const v = p.b[p.b.length-3];               /* гласная, которая заговорила */
+    const lit = p.b.slice(0,-3)
+              + `<b>${v}</b>` + p.b[p.b.length-2] + `<b>e</b>`;
+    return `<div class="mrow">
+      <button class="mside" data-word="${p.a}" aria-label="${p.a}, ${p.ra}">
+        <span class="mem">${p.ea}</span>
+        <span class="mw">${p.a}</span>
+        <span class="mru">${p.ra}</span>
+      </button>
+      <span class="marrow">➜</span>
+      <button class="mside long" data-word="${p.b}" aria-label="${p.b}, ${p.rb}">
+        <span class="mem">${p.eb}</span>
+        <span class="mw">${lit}</span>
+        <span class="mru">${p.rb}</span>
+      </button>
+    </div>`;
+  }).join('');
+
+  return header('Немая e') + `
+    <div class="note">Добавь e в конец — и она сама не звучит, но заставляет гласную
+      назвать своё имя. Было «а» — стало «эй». Нажми на оба слова и услышь разницу.</div>
+    <div class="scroll">${rows}</div>`;
+}
+
+function avatarRow(side){
+  return AVATARS.map(a=>
+    `<button class="av ${duel.av[side]===a?'on':''}" data-av="${side}:${a}"
+             aria-label="Выбрать ${a}">${a}</button>`).join('');
+}
+
+function screenDuelIntro(){
+  return header('Дуэль') + `
+    <div class="note">Играют по очереди, по 60 секунд. Слова у игроков <b>разные</b> —
+      подсмотреть не выйдет, — но подобраны парами равной сложности, так что
+      никому не достанутся слова полегче.</div>
+    <div class="scroll">
+      <div class="pside">
+        <div class="plabel">Первый игрок <b>${duel.av[0]}</b></div>
+        <div class="avrow">${avatarRow(0)}</div>
+      </div>
+      <div class="pside">
+        <div class="plabel">Второй игрок <b>${duel.av[1]}</b></div>
+        <div class="avrow">${avatarRow(1)}</div>
+      </div>
+    </div>
+    <button class="blk grass" data-duelturn="0">▶ Ходит ${duel.av[0]}</button>`;
+}
+
+function screenDuelPass(){
+  const r = duel.results[0];
+  return header('Передай телефон') + `
+    <div class="result">
+      <div class="medal">${duel.av[0]} ➡️ ${duel.av[1]}</div>
+      <div class="cap">${duel.av[0]}: <b>${r.correct} из ${r.done}</b> за ${secs(r.time)}.
+        У второго игрока будут <b>другие слова</b> — такой же сложности.</div>
+    </div>
+    <button class="blk grass" data-duelturn="1">▶ Ходит ${duel.av[1]}</button>`;
+}
+
+/* Побеждает тот, кто прочитал больше слов верно; при равенстве — кто быстрее. */
+function duelWinner(){
+  const [a,b] = duel.results;
+  if(a.correct !== b.correct) return a.correct > b.correct ? 0 : 1;
+  if(a.time !== b.time) return a.time < b.time ? 0 : 1;
+  return -1;
+}
+
+function screenDuelEnd(){
+  const [a,b] = duel.results;
+  const win = duelWinner();
+  const tie = win === -1;
+  const card = (i,r) => `
+    <div class="pcard ${win===i ? 'won':''}">
+      ${win===i ? '<div class="crown">👑</div>' : ''}
+      <div class="pav">${duel.av[i]}</div>
+      <div class="pscore">${r.correct}</div>
+      <div class="ptime">${secs(r.time)}</div>
+    </div>`;
+  const why = tie ? 'Ничья по всему — нужен ещё раунд.'
+    : (a.correct !== b.correct
+        ? `Победил ${duel.av[win]} — прочитал верно на ${Math.abs(a.correct-b.correct)} ${plural(Math.abs(a.correct-b.correct))} больше.`
+        : `Верных поровну, победил ${duel.av[win]} — быстрее на ${Math.abs(a.time-b.time)} с.`);
+
+  return header('Итог дуэли') + `
+    <div class="result">
+      <div class="versus">${card(0,a)}<div class="vs">:</div>${card(1,b)}</div>
+      <div class="cap">${why}</div>
+      <div class="cap" style="font-size:14px;opacity:.75">Дуэль не меняет ранг:
+        здесь важно, кто кого, а не сколько звёзд.</div>
+    </div>
+    <div class="nav">
+      <button class="blk grass" data-rematch="1">⚔️ Реванш</button>
+      <button class="blk ghost" data-go="home">Домой</button>
+    </div>`;
+}
+
+/* русские числительные: 1 слово, 2 слова, 5 слов */
+function pluralForm(n, one, few, many){
+  const d10 = n % 10, d100 = n % 100;
+  if(d10 === 1 && d100 !== 11) return one;
+  if(d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14)) return few;
+  return many;
+}
+const plural       = n => pluralForm(n, 'слово', 'слова', 'слов');
+const pluralPhrase = n => pluralForm(n, 'фраза', 'фразы', 'фраз');
+
+function render(){
+  const s = { home:screenHome, letter:screenLetter, words:screenWords,
+              game:screenGame, spell:screenSpell, tricky:screenTricky,
+              race:screenRace, raceEnd:screenRaceEnd,
+              duelIntro:screenDuelIntro, duelPass:screenDuelPass,
+              duelEnd:screenDuelEnd, phrases:screenPhrases,
+              magic:screenMagic, texts:screenTexts, text:screenText,
+              aloud:screenAloud, aloudEnd:screenAloudEnd,
+              parent:screenParent }[view.name];
+  /* главный экран — единственный, где содержимое заведомо длиннее экрана
+     и при этом нет ни одного элемента, который обязан остаться на виду */
+  app.classList.toggle('pagescroll', view.name === 'home');
+  app.innerHTML = s();
+}
+
+/* ============================================================
+   5. СОБЫТИЯ — одна делегированная обработка на всё приложение
+   ============================================================ */
+
+function openLetter(gi, i){
+  go('letter', gi, i);
+  setTimeout(()=>Sound.phoneme(GROUPS[gi].letters[i].l), 200);
+}
+
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-letter],[data-phoneme],[data-word],[data-step],'+
+                             '[data-blend],[data-sound],[data-opt],[data-again],[data-bank],[data-erase],'+
+                             '[data-tricky],[data-race],[data-pick],[data-duel],'+
+                             '[data-duelturn],[data-rematch],[data-av],'+
+                             '[data-say],[data-phrase],[data-endturn],'+
+                             '[data-text],[data-line],[data-whole],[data-tans],'+
+                             '[data-aloud],[data-areveal],[data-agrade],'+
+                             '[data-copycode],[data-restore]');
+  if(!t) return;
+
+  if(t.dataset.race){
+    const [mode, lvl] = t.dataset.race.includes(':')
+      ? t.dataset.race.split(':') : ['w', t.dataset.race];
+    startRace(+lvl, mode); return;
+  }
+  if(t.dataset.duel){ startDuel(); return; }
+  if(t.dataset.duelturn){ duelTurn(+t.dataset.duelturn); return; }
+  /* досрочный конец хода — это конец забега, а НЕ уход домой:
+     иначе дуэль молча обнуляется и её приходится начинать заново */
+  if(t.dataset.endturn){ endRace(); return; }
+  if(t.dataset.rematch){ duel.queues = makeDuelQueues(LEVEL_SIZE);
+                         duel.results = [null,null]; go('duelIntro'); return; }
+
+  if(t.dataset.av){
+    const [side, a] = t.dataset.av.split(':');
+    duel.av[side] = a;
+    if(side === '0') P.avA = a; else P.avB = a;
+    save(); render(); return;
+  }
+
+  if(t.dataset.tricky){
+    Sound.word(t.dataset.tricky);
+    if(earn('T'+t.dataset.tricky)) render();
+    return;
+  }
+
+  if(t.dataset.pick){
+    if(race.locked) return;
+    const ok = t.dataset.pick === race.q.W.w;
+    race.locked = true;
+    race.done++;
+    race.marks.push(ok ? 'hit' : 'miss');
+    if(race.mode !== 'p') mark('w:' + race.q.W.w, ok ? 'ok' : 'no');
+    t.classList.add(ok ? 'ok' : 'no');
+    document.getElementById('q').classList.add(ok ? 'ok' : 'no');
+    /* верный ответ слышно всегда — и когда угадал, и когда ошибся */
+    if(race.mode === 'p') Sound.sentence(race.q.W.w); else Sound.word(race.q.W.w);
+
+    if(ok){
+      race.correct++;
+      const sc = document.querySelector('.hud .sc');
+      if(sc) sc.textContent = race.correct + '/' + race.size;
+    } else {
+      const right = [...document.querySelectorAll('.pk')]
+        .find(b => b.dataset.pick === race.q.W.w);
+      right && right.classList.add('ok');       /* показываем верный ответ */
+    }
+
+    setTimeout(() => {
+      if(!race) return;
+      if(race.done >= race.size){ endRace(); return; }
+      nextQ(); render();
+    }, ok ? 420 : (race.mode === 'p' ? 1800 : 1200));
+    return;
+  }
+
+  if(t.dataset.go){
+    if(t.dataset.go==='game') newRound();
+    if(t.dataset.go==='spell') newSpell();
+    go(t.dataset.go); return;
+  }
+
+  if(t.dataset.letter){
+    const [gi,i] = t.dataset.letter.split(':').map(Number);
+    openLetter(gi,i); return;
+  }
+
+  if(t.dataset.phoneme){ Sound.phoneme(t.dataset.phoneme); return; }
+  if(t.dataset.sound){ Sound.phoneme(t.dataset.sound); return; }
+  if(t.dataset.say){ Sound.word(t.dataset.say); return; }
+
+  if(t.dataset.phrase){
+    const p = PHRASES[+t.dataset.phrase];
+    Sound.sentence(p.en);
+    if(earn('F'+t.dataset.phrase)) document.querySelector('.score').textContent = '⭐ ' + P.stars;
+    return;
+  }
+
+  if(t.dataset.text){ go('text', 0, +t.dataset.text); return; }
+
+  if(t.dataset.aloud){ startAloud(); return; }
+
+  if(t.dataset.areveal){
+    const W = aloud.queue[aloud.i];
+    const el = document.getElementById('aru');
+    if(el) el.textContent = W.ru;
+    Sound.word(W.w);
+    return;
+  }
+
+  if(t.dataset.agrade){
+    const A = aloud, W = A.queue[A.i], res = t.dataset.agrade;
+    mark('w:' + W.w, res);
+    A[res]++;
+    if(res === 'ok'){ P.stars++; P.aloud = (P.aloud||0) + 1; }
+    else P.aloud = (P.aloud||0) + 1;
+    save();
+    Sound.blip(res === 'ok');
+    A.i++;
+    if(A.i >= A.queue.length){ go('aloudEnd'); return; }
+    render();
+    return;
+  }
+
+  if(t.dataset.copycode){
+    const ta = document.getElementById('pcode');
+    const msg = document.getElementById('pmsg');
+    ta.select();
+    let done = false;
+    try{ done = document.execCommand('copy'); }catch(e){}
+    if(navigator.clipboard && !done){
+      navigator.clipboard.writeText(ta.value).then(()=>{}, ()=>{});
+      done = true;
+    }
+    if(msg){ msg.style.display='block';
+      msg.textContent = done ? 'Код скопирован. Сохраните его в заметках.'
+                             : 'Скопируйте выделенный текст вручную.'; }
+    return;
+  }
+
+  if(t.dataset.restore){
+    const val = (document.getElementById('pin')||{}).value || '';
+    const msg = document.getElementById('pmsg');
+    const ok = importCode(val);
+    if(ok){ render(); }
+    const m = document.getElementById('pmsg') || msg;
+    if(m){ m.style.display='block';
+      m.textContent = ok ? 'Прогресс восстановлен.' : 'Код не подошёл — проверьте, что скопирован целиком.'; }
+    return;
+  }
+
+  if(t.dataset.line){
+    const [i,j] = t.dataset.line.split(':').map(Number);
+    Sound.sentence(TEXTS[i].lines[j]); return;
+  }
+
+  if(t.dataset.whole){
+    Sound.sentence(TEXTS[+t.dataset.whole].lines.join(' ')); return;
+  }
+
+  if(t.dataset.tans){
+    const [i, ans] = t.dataset.tans.split(':');
+    const T = TEXTS[+i];
+    const ok = ans === T.ok;
+    Sound.blip(ok);
+    if(ok){ earn('X'+i); render(); }
+    else {
+      t.classList.add('no');
+      setTimeout(()=>t.classList.remove('no'), 900);
+    }
+    return;
+  }
+
+  if(t.dataset.word){
+    Sound.word(t.dataset.word);
+    if(t.dataset.earn && earn(t.dataset.earn)) render();
+    return;
+  }
+
+  if(t.dataset.step){
+    const g = GROUPS[view.g];
+    let gi = view.g, i = view.i + (+t.dataset.step);
+    if(i < 0){ if(gi === 0){ go('home'); return; } gi--; i = GROUPS[gi].letters.length-1; }
+    else if(i >= g.letters.length){
+      const next = GROUPS[gi+1];
+      if(!next || !isOpen(next)){ go('home'); return; }
+      gi++; i = 0;
+    }
+    openLetter(gi,i); return;
+  }
+
+  if(t.dataset.blend){
+    const w = t.dataset.blend, id = t.dataset.id;
+    const chips = [...document.querySelectorAll(`#chips${id} .chip`)];
+    Sound.blend(w, t.dataset.seq.split(' '),
+                k => chips.forEach((c,j)=>c.classList.toggle('lit', j===k)));
+    if(earn('W'+w)) document.querySelector('.score').textContent = '⭐ ' + P.stars;
+    return;
+  }
+
+  if(t.dataset.again){ Sound.phoneme(game.right.l); return; }
+
+  if(t.dataset.opt){
+    if(game.locked) return;
+    const ok = SAY[t.dataset.opt] === SAY[game.right.l];
+    game.locked = true;
+    mark('L:' + game.right.l, ok ? 'ok' : 'no');
+    t.classList.add(ok ? 'ok' : 'no');
+    Sound.blip(ok);
+    if(ok){
+      P.run = (P.run||0)+1; P.best = Math.max(P.best||0, P.run); P.stars++;
+    } else {
+      P.run = 0;
+      const r = [...document.querySelectorAll('.opt')].find(b=>b.dataset.opt===game.right.l);
+      r && r.classList.add('ok');
+    }
+    save();
+    setTimeout(()=>{ newRound(); render(); setTimeout(()=>Sound.phoneme(game.right.l),250); },
+               ok ? 800 : 1600);
+    return;
+  }
+
+  if(t.dataset.bank){
+    const S = spell;
+    if(S.state) return;
+    const b = S.bank[+t.dataset.bank];
+    if(b.used || S.placed.length >= S.need.length) return;
+    b.used = true; S.placed.push(b.ch);
+    Sound.phoneme(b.ch);
+
+    if(S.placed.length === S.need.length){
+      const ok = S.placed.join('') === S.W.w;
+      S.state = ok ? 'good' : 'bad';
+      mark('w:' + S.W.w, ok ? 'ok' : 'no');
+      Sound.blip(ok);
+      render();
+      if(ok){
+        P.stars++; P.spelled = (P.spelled||0)+1; save();
+        setTimeout(()=>Sound.word(S.W.w), 350);
+        setTimeout(()=>{ newSpell(); render(); }, 1900);
+      } else {
+        setTimeout(()=>{ S.bank.forEach(x=>x.used=false); S.placed=[]; S.state=''; render(); }, 900);
+      }
+      return;
+    }
+    render(); return;
+  }
+
+  if(t.dataset.erase){
+    const S = spell;
+    if(S.state || !S.placed.length) return;
+    const ch = S.placed.pop();
+    for(let i=S.bank.length-1;i>=0;i--) if(S.bank[i].used && S.bank[i].ch===ch){ S.bank[i].used=false; break; }
+    render(); return;
+  }
+});
+
+app.addEventListener('keydown', e => {
+  if(e.key===' '||e.key==='Enter'){
+    const t = e.target.closest('[data-blend]');
+    if(t){ e.preventDefault(); t.click(); }
+  }
+});
+
+/* свайп между буквами */
+let x0=null;
+app.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive:true});
+app.addEventListener('touchend', e => {
+  if(x0===null || view.name!=='letter') return;
+  const dx = e.changedTouches[0].clientX - x0; x0 = null;
+  if(Math.abs(dx) < 60) return;
+  const btn = document.querySelector(`[data-step="${dx<0?1:-1}"]`);
+  btn && btn.click();
+}, {passive:true});
+
+/* ============================================================
+   6. ФОН — пиксельные облака, медленно плывут по небу
+   ============================================================ */
+
+(function clouds(){
+  const c = document.getElementById('clouds'), g = c.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const B = 8;                                   /* размер «пикселя» облака */
+  let list = [];
+  const make = () => {
+    list = Array.from({length:5}, (_,i)=>({
+      x: Math.random()*innerWidth,
+      y: 30 + Math.random()*(innerHeight*0.75),
+      w: 5 + Math.floor(Math.random()*4),
+      h: 2 + Math.floor(Math.random()*2),
+      v: 0.12 + Math.random()*0.18
+    }));
+  };
+  const fit = () => {
+    const d = Math.min(devicePixelRatio||1, 2);
+    c.width = innerWidth*d; c.height = innerHeight*d;
+    c.style.width = innerWidth+'px'; c.style.height = innerHeight+'px';
+    g.setTransform(d,0,0,d,0,0);
+    make();
+  };
+  const draw = () => {
+    g.clearRect(0,0,innerWidth,innerHeight);
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    for(const cl of list){
+      for(let row=0; row<cl.h; row++){
+        const inset = row * B;
+        g.fillRect(Math.round(cl.x)+inset, Math.round(cl.y)+row*B,
+                   (cl.w - row*2)*B, B);
+      }
+      if(!still){
+        cl.x += cl.v;
+        if(cl.x > innerWidth + cl.w*B) cl.x = -cl.w*B*2;
+      }
+    }
+    if(!still) requestAnimationFrame(draw);
+  };
+  addEventListener('resize', ()=>{ fit(); if(still) draw(); });
+  fit(); draw();
+})();
+
+/* ============================================================
+   7. СТАРТ
+   ============================================================ */
+
+/* страница может открываться без своего <head> — гарантируем мобильный масштаб */
+if(!document.querySelector('meta[name="viewport"]')){
+  const m = document.createElement('meta');
+  m.name = 'viewport';
+  m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+  document.head.appendChild(m);
+}
+document.documentElement.lang = 'ru';
+
+touchDay();
+Sound.init();
+render();
+</script>
