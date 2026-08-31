@@ -1,3 +1,6 @@
 _check.html
 *.bak
 *.bak.html
+_record.html
+_voice.json
+__pycache__/
