@@ -34,7 +34,7 @@ my %openAt;
 for my $n (1..8) { for my $k (1..$n) { $openAt{$n}{$_} = 1 for @{$grpLetters{$k}}; } }
 
 # --- разбивка слова на звуки (повторяет split() из приложения) ---
-my @DIG = qw(ck ss ll ff ai oa ie ee or oo ng ch sh th qu ou oi ue er ar);
+my @DIG = qw(ck ss ll ff gg ai oa ie ee or oo ng ch sh th qu ou oi ue er ar);
 my %DIG = map { $_ => 1 } @DIG;
 sub magicIndex { my ($w)=@_; return -1 if length($w)<4 || substr($w,-1) ne 'e';
   my $v = substr($w,-3,1); my $c = substr($w,-2,1);
@@ -45,7 +45,26 @@ sub splitw { my ($w)=@_; my $m = magicIndex($w); my $end = $m>=0 ? $m : length($
     if ($i+1 < $end && $DIG{$pair}) { push @o,$pair; $i+=2; } else { push @o,substr($w,$i,1); $i++; } }
   if ($m>=0) { push @o, substr($w,$m,1).'_e'; push @o, substr($w,$m+1,1); }
   return @o; }
-my %DOUBLE = map { $_=>1 } qw(ck ss ll ff);
+my %DOUBLE = map { $_=>1 } qw(ck ss ll ff gg);
+
+# Слова, которые задали звуки сами: book — это короткое oo2, а не oo. Написание
+# тут врёт, и верить надо слову. То же самое делает DECLARED в приложении.
+my %declared;
+while ($groups =~ /\{\s*w:'([a-zA-Z']+)',[^\n]*?s:\[([^\]]*)\]/g) {
+  my ($w,$body) = ($1,$2); $declared{$w} = [ $body =~ /'([^']+)'/g ];
+}
+sub soundsOf { my ($w)=@_; return $declared{$w} ? @{$declared{$w}} : splitw($w); }
+
+# На какой группе слово становится читаемым; 0 — невидимка, 9 — никогда
+sub wordLevel {
+  my ($w)=@_; return $tGrp{$w} if $isTricky{$w};   # невидимка тоже ждёт своей группы
+  for my $n (1..8) {
+    my $ok = 1;
+    for my $u (soundsOf($w)) { $ok = 0 unless $openAt{$n}{$u} || $DOUBLE{$u}; }
+    return $n if $ok;
+  }
+  return 9;
+}
 
 print "СЛОВ ВСЕГО: ".scalar(keys %wordOf)."   НЕВИДИМОК: ".scalar(@tw)."\n";
 print "по группам: "; for my $n (1..8) { my $c = grep { $wordOf{$_}==$n } keys %wordOf; print "$n:$c "; } print "\n\n";
@@ -56,12 +75,9 @@ print "!! ДУБЛИ СЛОВ: @dups\n\n" if @dups;
 my @bad;
 for my $w (sort keys %wordOf) {
   my $n = $wordOf{$w};
-  # у слов с явным s:[...] звуки заданы вручную — их пропускаем
-  next if $s =~ /w:'\Q$w\E',[^\n]*s:\[/;
-  for my $u (splitw($w)) {
+  for my $u (soundsOf($w)) {
     next if $DOUBLE{$u};
-    my $base = $u; $base =~ s/^([aeiou])_e$/$1_e/;
-    push @bad, "$w (гр.$n): звук '$u' ещё не пройден" unless $openAt{$n}{$base};
+    push @bad, "$w (гр.$n): звук '$u' ещё не пройден" unless $openAt{$n}{$u};
   }
 }
 print @bad ? "!! СЛОВА ИЗ НЕПРОЙДЕННЫХ ЗВУКОВ:\n".join("\n",@bad)."\n\n" : "OK: все слова читаются пройденными звуками\n\n";
@@ -74,6 +90,9 @@ my %untaught;
 for my $l (@lines) { for my $tok (split /\s+/, $l) {
   my $w = lc $tok; $w =~ s/[^a-z']//g; next unless $w;
   next if $isTricky{$w} || $wordOf{$w};
+  # eggs, stars, gets — это те же слова, а не новые
+  my $base = $w; $base =~ s/(es|s)$//;
+  next if $wordOf{$base};
   $untaught{$w}++; } }
 print %untaught
   ? "!! ВО ФРАЗАХ И ТЕКСТАХ ЕСТЬ, В СЛОВАХ НЕТ:\n  ".join(', ', map {"$_ x$untaught{$_}"} sort keys %untaught)."\n\n"
@@ -85,4 +104,44 @@ for my $n (1..8) { my $c = grep { $wordOf{$_} <= $n && !$noPic{$_} } keys %wordO
 print "\n";
 print "невидимок открыто по группам: ";
 for my $n (1..8) { my $c = grep { $tGrp{$_} <= $n } keys %tGrp; print "$n:$c "; }
+print "\n\n";
+
+# --- 4. фразы и тексты: сколько открыто на каждой группе ---
+# Пустая группа — это экран «Пока ни одной фразы» у ребёнка, который честно
+# прошёл её до конца. На глаз этого не видно: сам-то список не пустой.
+sub lineLevel { my ($l)=@_; my $lv = 1;
+  for my $tok (split /\s+/, $l) { my $w = lc $tok; $w =~ s/[^a-z']//g; next unless $w;
+    my $n = wordLevel($w); $lv = $n if $n > $lv; }
+  return $lv; }
+
+my (@phLines, @phEm, %phLevel, @phDup);
+while ($phr =~ /\{\s*en:'([^']*)',\s*ru:'[^']*',\s*em:'([^']*)'/g) {
+  push @phLines, $1; push @phEm, $2; $phLevel{$1} = lineLevel($1); }
+die "фразы не разобрались" unless @phLines;
+
+my %seenPh; for my $l (@phLines) { push @phDup, $l if $seenPh{$l}++; }
+print "!! ФРАЗЫ-ДУБЛИ: ".join('; ', @phDup)."\n" if @phDup;
+
+# Одна картинка на две фразы — в забеге такой вопрос без ответа: обе верны.
+my %emOf; for my $i (0..$#phLines) { push @{$emOf{$phEm[$i]}}, $phLines[$i]; }
+my @emDup = sort grep { @{$emOf{$_}} > 1 } keys %emOf;
+print "!! ОДНА КАРТИНКА НА РАЗНЫЕ ФРАЗЫ:\n  ".
+      join("\n  ", map { "$_ → ".join(' / ', @{$emOf{$_}}) } @emDup)."\n" if @emDup;
+
+my @txLevel;
+while ($txt =~ /lines:\[(.*?)\]/gs) { my $b=$1; my $lv = 1;
+  while ($b =~ /'([^']*)'/g) { my $n = lineLevel($1); $lv = $n if $n > $lv; }
+  push @txLevel, $lv; }
+
+print "ФРАЗ ВСЕГО: ".scalar(@phLines)."   ТЕКСТОВ: ".scalar(@txLevel)."\n";
+my @empty;
+print "фраз открыто по группам: ";
+for my $n (1..8) { my $c = grep { $phLevel{$_} <= $n } @phLines;
+                   push @empty, "фразы гр.$n" unless $c; print "$n:$c "; }
 print "\n";
+print "текстов открыто по группам: ";
+for my $n (1..8) { my $c = grep { $_ <= $n } @txLevel;
+                   push @empty, "тексты гр.$n" if !$c && $n > 2; print "$n:$c "; }
+print "\n";
+print @empty ? "!! ПУСТОЙ ЭКРАН: ".join(', ', @empty)."\n"
+             : "OK: на каждой группе есть что читать\n";

@@ -339,6 +339,8 @@ body{
 .fru{font-size:14px;color:var(--ink-dim);line-height:1.35}
 .flock{font-size:14px;color:var(--ink);background:var(--paper-2);
        padding:10px 12px;box-shadow:0 4px 0 var(--line);line-height:1.4}
+.fgrp{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+      color:var(--ink-dim);padding:6px 2px 0}
 
 /* ---------- читай вслух ---------- */
 .blk.lava{background:var(--lava);box-shadow:0 6px 0 var(--lava-d)}
@@ -932,41 +934,130 @@ const TRICKY = [
    слова, которое пришлось бы угадывать.
    ------------------------------------------------------------ */
 const PHRASES = [
-  { en:'The cat is on the bed.',     ru:'Кот на кровати.',              em:'🐱', cf:'bed' },
-  { en:'The sun is hot.',            ru:'Солнце горячее.',              em:'☀️', cf:'night' },
-  { en:'Go to bed!',                 ru:'Иди спать!',                   em:'🛏️', cf:'bed' },
-  { en:'She said no.',               ru:'Она сказала нет.',             em:'🙅' },
-  { en:'My dog has a bone.',         ru:'У моей собаки кость.',         em:'🦴' },
-  { en:'Dad is in the car.',         ru:'Папа в машине.',               em:'🚗' },
-  { en:'The frog is on a log.',      ru:'Лягушка на бревне.',           em:'🐸' },
-  { en:'We can win!',                ru:'Мы можем победить!',           em:'🏆' },
-  { en:'He can run fast.',           ru:'Он умеет быстро бегать.',      em:'🏃' },
-  { en:'My mum has a red hat.',      ru:'У мамы красная шапка.',        em:'🎩' },
-  { en:'I can see a big red bus.',   ru:'Я вижу большой красный автобус.', em:'🚌' },
-  { en:'The fish is in the net.',    ru:'Рыба в сетке.',                em:'🐟' },
-  { en:'We go to the shop.',         ru:'Мы идём в магазин.',           em:'🏪' },
-  { en:'The duck is in the pool.',   ru:'Утка в бассейне.',             em:'🦆' },
-  { en:'The king has a big ring.',   ru:'У короля большое кольцо.',     em:'👑' },
-  { en:'It was dark in the room.',   ru:'В комнате было темно.',        em:'🌑', cf:'night' },
-  { en:'Look at the moon.',          ru:'Посмотри на луну.',            em:'🌙', cf:'night' },
-  { en:'This is my home.',           ru:'Это мой дом.',                 em:'🏡' },
-  { en:'That box is big.',           ru:'Та коробка большая.',          em:'📦' },
-  { en:'He has five green pens.',    ru:'У него пять зелёных ручек.',   em:'🖊️' },
-  { en:'My sister has a doll.',      ru:'У сестры кукла.',              em:'🪆' },
-  { en:'She has a blue bike.',       ru:'У неё синий велосипед.',       em:'🚲' },
-  { en:'I can count to ten.',        ru:'Я умею считать до десяти.',    em:'🔢' },
-  { en:'The snake is on a stone.',   ru:'Змея на камне.',               em:'🐍' },
-  { en:'I like my cake.',            ru:'Мне нравится мой торт.',       em:'🎂' },
-  { en:'I can ride my bike to the park.', ru:'Я могу доехать до парка на велосипеде.', em:'🏞️' },
-  { en:'The ship has a big flag.',   ru:'На корабле большой флаг.',     em:'🚩' },
-  { en:'My sister can cook fish and chips.', ru:'Сестра умеет готовить рыбу с картошкой.', em:'🍟' },
-  { en:'Look at the six red socks.', ru:'Посмотри на шесть красных носков.', em:'🧦' },
-  { en:'The frog can jump on the stone.', ru:'Лягушка может прыгнуть на камень.', em:'🪨' },
-  { en:'I like to sleep in my bed.', ru:'Я люблю спать в своей кровати.', em:'🛌', cf:'bed' },
-  { en:'The fox got the egg.',       ru:'Лиса утащила яйцо.',           em:'🥚' },
-  { en:'Dad can fix the car.',       ru:'Папа умеет чинить машину.',    em:'🔧' },
-  { en:'We can count to nine.',      ru:'Мы умеем считать до девяти.',  em:'9️⃣' },
-  { en:'The cake is on the desk.',   ru:'Торт на столе.',               em:'🪑' },
+  /* открываются в группе 1 */
+  { en:'I spin!',                            ru:'Я кручусь!',                              em:'🌀' },
+  { en:'It is a tap.',                       ru:'Это кран.',                               em:'🚰' },
+  { en:'It is an ant.',                      ru:'Это муравей.',                            em:'🐜' },
+  { en:'She sat.',                           ru:'Она села.',                               em:'💺' },
+  { en:'The ant is in the pan.',             ru:'Муравей в сковороде.',                    em:'🍳' },
+  { en:'We nap.',                            ru:'Мы дремлем.',                             em:'😴' },
+
+  /* открываются в группе 2 */
+  { en:'Dad has a map.',                     ru:'У папы карта.',                           em:'🗺️' },
+  { en:'I am sad.',                          ru:'Мне грустно.',                            em:'😢' },
+  { en:'I did it!',                          ru:'Я это сделал!',                           em:'🙌' },
+  { en:'My cap is red.',                     ru:'Моя кепка красная.',                      em:'🧢' },
+  { en:'Ten men sat.',                       ru:'Десять мужчин сели.',                     em:'👬' },
+  { en:'The hen has ten eggs.',              ru:'У курицы десять яиц.',                    em:'🐔' },
+  { en:'The kid has a pet rat.',             ru:'У мальчика ручная крыса.',                em:'🐀' },
+  { en:'The pen is in my hand.',             ru:'Ручка у меня в руке.',                    em:'✋' },
+
+  /* открываются в группе 3 */
+  { en:'Go to bed!',                         ru:'Иди спать!',                              em:'🛏️', cf:'bed' },
+  { en:'He can run fast.',                   ru:'Он умеет быстро бегать.',                 em:'🏃' },
+  { en:'I get milk in a cup.',               ru:'Я наливаю молоко в чашку.',               em:'🥛' },
+  { en:'I got a red drum.',                  ru:'Мне достался красный барабан.',           em:'🥁' },
+  { en:'Mum has a big bag.',                 ru:'У мамы большая сумка.',                   em:'👜' },
+  { en:'My mum has a red hat.',              ru:'У мамы красная шапка.',                   em:'🎩' },
+  { en:'Stop the bus!',                      ru:'Останови автобус!',                       em:'🛑', cf:'bus' },
+  { en:'The cat is on the bed.',             ru:'Кот на кровати.',                         em:'🐱', cf:'bed' },
+  { en:'The cat sat on the mat.',            ru:'Кот сел на коврик.',                      em:'🐈' },
+  { en:'The clock is big.',                  ru:'Часы большие.',                           em:'🕐' },
+  { en:'The dog got the bun.',               ru:'Пёс утащил булочку.',                     em:'🥯' },
+  { en:'The doll is in the bag.',            ru:'Кукла в сумке.',                          em:'🧸', cf:'doll' },
+  { en:'The frog fell in the pot.',          ru:'Лягушка упала в кастрюлю.',               em:'🍲' },
+  { en:'The frog is on a log.',              ru:'Лягушка на бревне.',                      em:'🐸' },
+  { en:'The lamp is on.',                    ru:'Лампа горит.',                            em:'💡' },
+  { en:'The sun is hot.',                    ru:'Солнце горячее.',                         em:'☀️', cf:'night' },
+  { en:'The sun is up.',                     ru:'Солнце взошло.',                          em:'🌅', cf:'night' },
+  { en:'You can help me.',                   ru:'Ты можешь мне помочь.',                   em:'🤝' },
+
+  /* открываются в группе 4 */
+  { en:'A bee is on my hand.',               ru:'Пчела у меня на руке.',                   em:'🐝' },
+  { en:'Come here!',                         ru:'Иди сюда!',                               em:'👋' },
+  { en:'Get your coat!',                     ru:'Возьми куртку!',                          em:'🧥' },
+  { en:'I can jump!',                        ru:'Я умею прыгать!',                         em:'🤸' },
+  { en:'I can see a big red bus.',           ru:'Я вижу большой красный автобус.',         em:'🚌', cf:'bus' },
+  { en:'I can see the green tree.',          ru:'Я вижу зелёное дерево.',                  em:'🌳' },
+  { en:'Mum has jam for me.',                ru:'У мамы для меня варенье.',                em:'🍓' },
+  { en:'She said no.',                       ru:'Она сказала нет.',                        em:'🙅' },
+  { en:'Some rain fell on the road.',        ru:'На дорогу пролился дождь.',               em:'🌧️' },
+  { en:'The boat is in the rain.',           ru:'Лодка под дождём.',                       em:'⛵' },
+  { en:'The goat is on the road.',           ru:'Коза на дороге.',                         em:'🐐' },
+  { en:'They see the train.',                ru:'Они видят поезд.',                        em:'🚂' },
+
+  /* открываются в группе 5 */
+  { en:'I can swim in the pool.',            ru:'Я умею плавать в бассейне.',              em:'🏊' },
+  { en:'My van is old.',                     ru:'Мой фургон старый.',                      em:'🚐' },
+  { en:'Put the food on the spoon.',         ru:'Положи еду на ложку.',                    em:'🥄' },
+  { en:'The duck is in the pool.',           ru:'Утка в бассейне.',                        em:'🦆' },
+  { en:'The king can sing.',                 ru:'Король умеет петь.',                      em:'🎤' },
+  { en:'The king has a big ring.',           ru:'У короля большое кольцо.',                em:'👑' },
+  { en:'The web is wet.',                    ru:'Паутина мокрая.',                         em:'🕸️' },
+  { en:'The wind was cool.',                 ru:'Ветер был прохладный.',                   em:'💨' },
+  { en:'We can win!',                        ru:'Мы можем победить!',                      em:'🏆' },
+  { en:'We sing a long song.',               ru:'Мы поём длинную песню.',                  em:'🎵' },
+  { en:'We went to the zoo.',                ru:'Мы пошли в зоопарк.',                     em:'🦁' },
+
+  /* открываются в группе 6 */
+  { en:'Give me three chips.',               ru:'Дай мне три картошки фри.',               em:'3️⃣', cf:'chips' },
+  { en:'I brush my teeth.',                  ru:'Я чищу зубы.',                            em:'🦷' },
+  { en:'I live with my mum and dad.',        ru:'Я живу с мамой и папой.',                 em:'👨‍👩‍👦' },
+  { en:'Sit down and think.',                ru:'Сядь и подумай.',                         em:'🤔' },
+  { en:'Thank you!',                         ru:'Спасибо!',                                em:'🙏' },
+  { en:'That box is big.',                   ru:'Та коробка большая.',                     em:'📦', cf:'box' },
+  { en:'The fish is in the net.',            ru:'Рыба в сетке.',                           em:'🐟', cf:'fish' },
+  { en:'The fox got the egg.',               ru:'Лиса утащила яйцо.',                      em:'🥚' },
+  { en:'The little fish is in the shell.',   ru:'Рыбка в ракушке.',                        em:'🐚' },
+  { en:'The ship has a big flag.',           ru:'На корабле большой флаг.',                em:'🚩' },
+  { en:'We go to the shop.',                 ru:'Мы идём в магазин.',                      em:'🏪', cf:'shop' },
+  { en:'We have fresh fish for lunch.',      ru:'У нас на обед свежая рыба.',              em:'🍽️', cf:'fish' },
+  { en:'What is in that box?',               ru:'Что в той коробке?',                      em:'🎁', cf:'box' },
+  { en:'When can we go to the shop?',        ru:'Когда мы пойдём в магазин?',              em:'🛒', cf:'shop' },
+
+  /* открываются в группе 7 */
+  { en:'A cloud is round.',                  ru:'Облако круглое.',                         em:'☁️' },
+  { en:'Dad can fix the car.',               ru:'Папа умеет чинить машину.',               em:'🔧' },
+  { en:'Dad is in the car.',                 ru:'Папа в машине.',                          em:'🚗', cf:'car' },
+  { en:'I can count to ten.',                ru:'Я умею считать до десяти.',               em:'🔢' },
+  { en:'I want a coin.',                     ru:'Я хочу монетку.',                         em:'💰' },
+  { en:'It is dark under the bed.',          ru:'Под кроватью темно.',                     em:'🔦', cf:'night' },
+  { en:'It was dark in the room.',           ru:'В комнате было темно.',                   em:'🌑', cf:'night' },
+  { en:'My mouth is big.',                   ru:'У меня большой рот.',                     em:'👄' },
+  { en:'My sister has a doll.',              ru:'У сестры кукла.',                         em:'🪆', cf:'doll' },
+  { en:'My sister is in the garden.',        ru:'Сестра в саду.',                          em:'🌷' },
+  { en:'The queen has a blue card.',         ru:'У королевы синяя карточка.',              em:'👸' },
+  { en:'We can count the stars.',            ru:'Мы можем сосчитать звёзды.',              em:'⭐' },
+  { en:'We start at the farm.',              ru:'Мы начинаем с фермы.',                    em:'🚜' },
+  { en:'Where is my car?',                   ru:'Где моя машина?',                         em:'🚙', cf:'car' },
+
+  /* открываются в группе 8 */
+  { en:'Give me one more cake.',             ru:'Дай мне ещё один торт.',                  em:'🍰', cf:'cake' },
+  { en:'He has five green pens.',            ru:'У него пять зелёных ручек.',              em:'🖊️' },
+  { en:'I can ride my bike to the park.',    ru:'Я могу доехать до парка на велосипеде.',  em:'🏞️' },
+  { en:'I like my cake.',                    ru:'Мне нравится мой торт.',                  em:'🎂', cf:'cake' },
+  { en:'I like to sleep in my bed.',         ru:'Я люблю спать в своей кровати.',          em:'🛌', cf:'bed' },
+  { en:'I look at my book.',                 ru:'Я смотрю в свою книгу.',                  em:'📖' },
+  { en:'I love my home.',                    ru:'Я люблю свой дом.',                       em:'❤️', cf:'home' },
+  { en:'I ride my bike again.',              ru:'Я снова еду на велосипеде.',              em:'🔁', cf:'bike' },
+  { en:'Look at the kite!',                  ru:'Посмотри на воздушного змея!',            em:'🪁' },
+  { en:'Look at the moon.',                  ru:'Посмотри на луну.',                       em:'🌙', cf:'night' },
+  { en:'Look at the six red socks.',         ru:'Посмотри на шесть красных носков.',       em:'🧦' },
+  { en:'My cute cat sat on a book.',         ru:'Мой милый кот сел на книгу.',             em:'😻' },
+  { en:'My dog has a bone.',                 ru:'У моей собаки кость.',                    em:'🦴', cf:'bone' },
+  { en:'My sister can cook fish and chips.', ru:'Сестра умеет готовить рыбу с картошкой.', em:'🍟', cf:'chips' },
+  { en:'She has a blue bike.',               ru:'У неё синий велосипед.',                  em:'🚲', cf:'bike' },
+  { en:'Smile at me!',                       ru:'Улыбнись мне!',                           em:'😀' },
+  { en:'Take the rose.',                     ru:'Возьми розу.',                            em:'🌹' },
+  { en:'The cake is on the desk.',           ru:'Торт на столе.',                          em:'🪑' },
+  { en:'The cute dog has a bone.',           ru:'У милого пса есть кость.',                em:'🐕', cf:'bone' },
+  { en:'The frog can jump on the stone.',    ru:'Лягушка может прыгнуть на камень.',       em:'🪨' },
+  { en:'The plane is late.',                 ru:'Самолёт опаздывает.',                     em:'✈️' },
+  { en:'The snake is on a stone.',           ru:'Змея на камне.',                          em:'🐍' },
+  { en:'This is my home.',                   ru:'Это мой дом.',                            em:'🏡', cf:'home' },
+  { en:'Time to go home.',                   ru:'Пора домой.',                             em:'⏰' },
+  { en:'We can count to nine.',              ru:'Мы умеем считать до девяти.',             em:'9️⃣' },
+  { en:'What is your name?',                 ru:'Как тебя зовут?',                         em:'📛' },
 ];
 
 /* ------------------------------------------------------------
@@ -977,45 +1068,99 @@ const PHRASES = [
    и понять — не одно и то же, и проверять надо второе.
    ------------------------------------------------------------ */
 const TEXTS = [
+  /* открываются в группе 2 */
+  { t:'The Cat and the Rat', ru:'Кот и крыса', em:'🐀',
+    lines:['My cat is mad.', 'A rat ran in.',
+           'The cat ran and ran.', 'The rat is in the sand.'],
+    ask:'Куда убежала крыса?', ok:'🏜️', opts:['🛏️', '🏜️', '🍳'] },
+
+  /* открываются в группе 3 */
+  { t:'Fun in the Sun', ru:'Весело на солнце', em:'🌞',
+    lines:['The sun is up.', 'It is hot.',
+           'I get milk in a cup.', 'It is fun!'],
+    ask:'Что мальчик налил в чашку?', ok:'🥛', opts:['🥛', '🍎', '🥚'] },
+  { t:'The Dog and the Bun', ru:'Пёс и булочка', em:'🥯',
+    lines:['My dog got a bun.', 'He ran fast.',
+           'Mum was mad.', 'The dog got the bun!'],
+    ask:'Что утащил пёс?', ok:'🥯', opts:['🥛', '🥯', '🥚'] },
+
+  /* открываются в группе 4 */
   { t:'The Cat and the Dog', ru:'Кот и пёс', em:'🐱',
     lines:['My cat is on the bed.', 'My dog is on the mat.',
            'The cat can see the dog.', 'The dog can see the cat!'],
-    ask:'Кто на кровати?', ok:'🐱', opts:['🐕','🐱','🐟'] },
+    ask:'Кто на кровати?', ok:'🐱', opts:['🐕', '🐱', '🐟'] },
+  { t:'The Goat and the Train', ru:'Коза и поезд', em:'🐐',
+    lines:['A goat is on the road.', 'A train is here!',
+           'The goat did not go.', 'They stop the train.'],
+    ask:'Кто стоял на дороге?', ok:'🐐', opts:['🐐', '🐕', '🐔'] },
 
-  { t:'The Shop', ru:'Магазин', em:'🏪',
-    lines:['Mum and I go to the shop.', 'We get milk and jam.',
-           'I can see a big cake!', 'Mum said: no cake.'],
-    ask:'Что мама не разрешила купить?', ok:'🎂', opts:['🥛','🎂','🍓'] },
-
+  /* открываются в группе 5 */
   { t:'The Duck', ru:'Утка', em:'🦆',
     lines:['A duck is in the pool.', 'The sun is hot.',
            'The duck can swim and swim.', 'It is fun!'],
-    ask:'Где утка?', ok:'🏊', opts:['🛏️','🌳','🏊'] },
+    ask:'Где утка?', ok:'🏊', opts:['🛏️', '🌳', '🏊'] },
+  { t:'The Song', ru:'Песня', em:'🎤',
+    lines:['The king will sing.', 'The song is long.',
+           'We all sing.', 'It was so cool!'],
+    ask:'Кто поёт?', ok:'👑', opts:['👑', '🦆', '🐸'] },
+  { t:'The Zoo', ru:'Зоопарк', em:'🦁',
+    lines:['We went to the zoo.', 'We went in a van.',
+           'I put food in my bag.', 'The zoo was cool!'],
+    ask:'На чём поехали в зоопарк?', ok:'🚐', opts:['🚌', '🚐', '🚂'] },
 
-  { t:'The Storm', ru:'Гроза', em:'🌩️',
-    lines:['It was dark.', 'The wind was fast.',
-           'Rain fell on the road.', 'I ran to my mum.'],
-    ask:'К кому побежал мальчик?', ok:'👩', opts:['👩','🧔','🐕'] },
-
-  { t:'My Bike', ru:'Мой велосипед', em:'🚲',
-    lines:['My bike is blue.', 'I ride it to the park.',
-           'My sister has a red bike.', 'We ride and ride.'],
-    ask:'Какого цвета велосипед у сестры?', ok:'🔴', opts:['🔵','💚','🔴'] },
-
-  { t:'The Ring', ru:'Кольцо', em:'👑',
-    lines:['The king has a ring.', 'The ring is round.',
-           'A fox got the ring!', 'The king is mad.'],
-    ask:'Кто утащил кольцо?', ok:'🦊', opts:['🦊','🐕','🐐'] },
-
+  /* открываются в группе 6 */
   { t:'Lunch', ru:'Обед', em:'🍱',
     lines:['Lunch is in the box.', 'I get fish and chips.',
            'Dad gets a bun.', 'It is fresh!'],
-    ask:'Что взял папа?', ok:'🥯', opts:['🐟','🥯','🍟'] },
+    ask:'Что взял папа?', ok:'🥯', opts:['🐟', '🥯', '🍟'] },
+  { t:'Teeth', ru:'Зубы', em:'🦷',
+    lines:['I brush my teeth.', 'My teeth are fresh.',
+           'Then I go to bed.', 'Mum said: sleep well!'],
+    ask:'Что мальчик делает перед сном?', ok:'🦷', opts:['🦷', '🛁', '📖'] },
+  { t:'The Little Fish', ru:'Рыбка', em:'🐚',
+    lines:['A little fish is in the shell.', 'A big fish can see it.',
+           'The little fish went down.', 'The big fish did not catch it!'],
+    ask:'Кто спрятался?', ok:'🐟', opts:['🐟', '🦈', '🐙'] },
 
+  /* открываются в группе 7 */
+  { t:'The Garden', ru:'Сад', em:'🌷',
+    lines:['My sister is out in the garden.', 'It is dark.',
+           'She can count the stars.', 'Mum said: come in!'],
+    ask:'Что считала сестра?', ok:'⭐', opts:['⭐', '☁️', '💰'] },
+  { t:'The Queen and the Coin', ru:'Королева и монета', em:'👸',
+    lines:['The queen has a coin.', 'It fell down.',
+           'Who can see it?', 'It is under her car!'],
+    ask:'Где нашлась монета?', ok:'🚗', opts:['🌳', '🚗', '🏠'] },
+  { t:'The Ring', ru:'Кольцо', em:'👑',
+    lines:['The king has a ring.', 'The ring is round.',
+           'A fox got the ring!', 'The king is mad.'],
+    ask:'Кто утащил кольцо?', ok:'🦊', opts:['🦊', '🐕', '🐐'] },
+  { t:'The Storm', ru:'Гроза', em:'🌩️',
+    lines:['It was dark.', 'The wind was fast.',
+           'Rain fell on the road.', 'I ran to my mum.'],
+    ask:'К кому побежал мальчик?', ok:'👩', opts:['👩', '🧔', '🐕'] },
+
+  /* открываются в группе 8 */
+  { t:'Cake Time', ru:'Время торта', em:'🍰',
+    lines:['It is time for cake.', 'Mum made it.',
+           'I take one.', 'It is so good!'],
+    ask:'Кто сделал торт?', ok:'👩', opts:['👩', '🧔', '👧'] },
+  { t:'My Bike', ru:'Мой велосипед', em:'🚲',
+    lines:['My bike is blue.', 'I ride it to the park.',
+           'My sister has a red bike.', 'We ride and ride.'],
+    ask:'Какого цвета велосипед у сестры?', ok:'🔴', opts:['🔵', '💚', '🔴'] },
+  { t:'The Kite', ru:'Воздушный змей', em:'🪁',
+    lines:['I have a red kite.', 'I take it to the park.',
+           'The wind is good.', 'My kite can go up!'],
+    ask:'Куда мальчик взял змея?', ok:'🏞️', opts:['🏞️', '🏪', '🛏️'] },
+  { t:'The Shop', ru:'Магазин', em:'🏪',
+    lines:['Mum and I go to the shop.', 'We get milk and jam.',
+           'I can see a big cake!', 'Mum said: no cake.'],
+    ask:'Что мама не разрешила купить?', ok:'🎂', opts:['🥛', '🎂', '🍓'] },
   { t:'Time to Sleep', ru:'Пора спать', em:'🌙',
     lines:['The sun is not up.', 'I can see the moon and the stars.',
            'It is dark in my room.', 'It is time to sleep.'],
-    ask:'Что видно на небе?', ok:'🌙', opts:['☀️','🌧️','🌙'] },
+    ask:'Что видно на небе?', ok:'🌙', opts:['☀️', '🌧️', '🌙'] },
 ];
 
 /* ------------------------------------------------------------
@@ -1381,8 +1526,7 @@ function voiceWarning(){
 }
 
 const readyPhrases = () => {
-  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
-  return PHRASES.filter(p => phraseReady(p, open)).length;
+  return PHRASES.filter(p => phraseReady(p, openUnits())).length;
 };
 
 /* Какая группа сейчас «сегодняшняя»: первая открытая, где собраны не все звёзды.
@@ -1718,8 +1862,7 @@ function levelPool(n){
 
 /* Фразы как вопросы забега: тот же механизм, только читать нужно предложение. */
 function phraseItems(){
-  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
-  return PHRASES.filter(p => phraseReady(p, open))
+  return PHRASES.filter(p => phraseReady(p, openUnits()))
                 .map(p => ({ w:p.en, em:p.em, ru:p.ru, cf:p.cf, phrase:true }));
 }
 
@@ -1883,30 +2026,79 @@ const TRICKY_SET = new Set(TRICKY.map(t => t.w.toLowerCase()));
 const DOUBLES = ['ck','ss','ll','ff','gg'];          /* удвоенные буквы отдельно не учим */
 const bareWord = tok => tok.toLowerCase().replace(/[^a-z']/g,'');
 
+/* Звуки слов, у которых написание врёт. split() читает написание, а book —
+   не «буун»: у него короткое oo2 из группы 8, и слово само это объявило.
+   Если верить написанию, book открывался бы вместе с moon — на три группы
+   раньше, чем ребёнок узнает, что oo бывает коротким, и он прочитал бы
+   его неправильно ровно в тот момент, когда учится читать правильно. */
+const DECLARED = new Map(GROUPS.flatMap(g => g.words.filter(W => W.s)
+                                                    .map(W => [W.w, W.s])));
+
+const wordSounds = w => DECLARED.get(w) || split(w);
+
+/* Что уже открыто: и звуки, и невидимки. Невидимку нужно сначала показать —
+   «She said no.» с жёлтым said из группы 4 не должна попадаться ребёнку,
+   прошедшему одну группу: жёлтое слово говорит «не разбирай, ты его знаешь»,
+   а он его не знает. */
+const openUnits = (n = openGroups().length) => new Set(
+  GROUPS.slice(0, n).flatMap(g => g.letters.map(L => L.l))
+        .concat(TRICKY.filter(t => t.g <= n).map(t => t.w.toLowerCase())));
+
 function phraseReady(ph, open){
   return ph.en.split(/\s+/).every(tok => {
     const w = bareWord(tok);
-    if(!w || TRICKY_SET.has(w)) return true;
-    return split(w).every(u => open.has(u) || DOUBLES.includes(u));
+    if(!w) return true;
+    if(TRICKY_SET.has(w)) return open.has(w);
+    return wordSounds(w).every(u => open.has(u) || DOUBLES.includes(u));
   });
 }
 
-function screenPhrases(){
-  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
-  const ready = PHRASES.filter(p => phraseReady(p, open));
-  const locked = PHRASES.length - ready.length;
+/* На какой группе фраза открывается. Считается один раз: фраз больше сотни,
+   а на экране их нужно разложить по группам — новые сверху. */
+const LEVEL_CACHE = new Map();
+function phraseLevel(en){
+  if(LEVEL_CACHE.has(en)) return LEVEL_CACHE.get(en);
+  let lv = GROUPS.length + 1;
+  for(let n = 1; n <= GROUPS.length; n++){
+    if(phraseReady({ en }, openUnits(n))){ lv = n; break; }
+  }
+  LEVEL_CACHE.set(en, lv);
+  return lv;
+}
 
-  const rows = ready.map(p => {
-    const i = PHRASES.indexOf(p);
-    const words = wordsHtml(p.en);
-    return `<div class="frow">
+const textLevel = T => Math.max(...T.lines.map(phraseLevel));
+
+function phraseCard(p){
+  const i = PHRASES.indexOf(p);
+  return `<div class="frow">
       <div class="fhead">
         <span class="fem">${p.em}</span>
         <span class="fru">${p.ru}</span>
         <button class="blk gold fplay" data-phrase="${i}">🔊 Вся фраза</button>
       </div>
-      <div class="fwords">${words}</div>
+      <div class="fwords">${wordsHtml(p.en)}</div>
     </div>`;
+}
+
+function screenPhrases(){
+  const open = openUnits();
+  const ready = PHRASES.filter(p => phraseReady(p, open));
+  const locked = PHRASES.length - ready.length;
+
+  /* Фраз больше сотни, и новые в общем списке тонут: ребёнок, только что
+     прошедший группу, листал бы до своих мимо всех старых. Поэтому свежие
+     сверху, а каждая пачка подписана номером группы. */
+  const byLevel = new Map();
+  ready.forEach(p => {
+    const n = phraseLevel(p.en);
+    if(!byLevel.has(n)) byLevel.set(n, []);
+    byLevel.get(n).push(p);
+  });
+  const rows = [...byLevel.keys()].sort((a,b) => b - a).map(n => {
+    const head = n === Math.max(...byLevel.keys())
+      ? `Новые · группа ${n}` : `Группа ${n}`;
+    return `<div class="fgrp">${head} · ${byLevel.get(n).length}</div>`
+         + byLevel.get(n).map(phraseCard).join('');
   }).join('');
 
   return header('Читай фразы') + `
@@ -1982,8 +2174,7 @@ const textReady = (T, open) =>
   T.lines.every(line => phraseReady({ en:line }, open));
 
 const readyTexts = () => {
-  const open = new Set(openGroups().flatMap(g => g.letters.map(L => L.l)));
-  return TEXTS.filter(T => textReady(T, open));
+  return TEXTS.filter(T => textReady(T, openUnits()));
 };
 
 function wordsHtml(line){
@@ -1997,7 +2188,7 @@ function wordsHtml(line){
 function screenTexts(){
   const ready = readyTexts();
   const locked = TEXTS.length - ready.length;
-  const rows = ready.map(T => {
+  const rows = ready.slice().sort((a,b) => textLevel(b) - textLevel(a)).map(T => {
     const i = TEXTS.indexOf(T);
     return `<button class="trow" data-text="${i}" aria-label="Текст ${T.ru}">
       <span class="w">${T.em}</span>
